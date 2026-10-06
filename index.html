@@ -585,7 +585,11 @@ function loginView(){
 }
 
 /* ============ 원장 대시보드 ============ */
-let FILT={teacher:'',cls:'',grade:'',school:'',period:'14',type:''};
+let FILT={teacher:'',cls:'',grade:'',school:'',period:'14',type:''},RISKALL=false,CALM=TODAY.slice(0,7);
+const nextMonth=m=>{const d=D(m+'-01');d.setMonth(d.getMonth()+1);return fmt(d).slice(0,7)};
+const byToday=(a,b)=>(isClassDay(b,TODAY)-isClassDay(a,TODAY))||(a.start<b.start?-1:a.start>b.start?1:0);
+function reportMonths(){return[...new Set([...DB.scores.map(x=>x.date.slice(0,7)),TODAY.slice(0,7)])].sort()}
+function unhide(cid){const ids=new Set(studentsOf(cid).map(s=>s.id));[...dismissed].forEach(k=>{if(ids.has(k.split('|')[0]))dismissed.delete(k)});render()}
 function setF(k,v){FILT[k]=v;if(k=='teacher')FILT.cls='';render()}
 function filtStudents(){return DB.students.filter(s=>(!FILT.teacher||s.homeroom==FILT.teacher)&&(!FILT.cls||s.cls==FILT.cls)&&(!FILT.grade||s.grade==FILT.grade)&&(!FILT.school||s.school==FILT.school))}
 function recordRows(set,start){
@@ -606,7 +610,6 @@ function dashboard(){
   const todaySet=new Set([...openT.map(t=>t.sid),...tLogs.map(l=>l.sid)]);
   const doneN=new Set(tLogs.filter(l=>l.outcome=='done').map(l=>l.sid)).size;
   const doneSet=new Set(tLogs.map(l=>l.sid)).size;
-  const wk=DB.care.filter(r=>set.has(r.sid)&&r.created>addDays(TODAY,-7));
   const pending=DB.care.filter(r=>set.has(r.sid)&&!r.result&&r.follow<=TODAY);
   const gap=studs.filter(s=>{const l=lastCare(s.id);return !l||diff(TODAY,l)>=DB.settings.gapDays});
   const delayed=hcls.filter(c=>(!FILT.cls||c.id==FILT.cls)&&progressOf(c).delayed);
@@ -623,7 +626,8 @@ function dashboard(){
   const remDays=days14.map(d=>{const L=DB.logs.filter(l=>l.date==d&&set.has(l.sid));return {l:md(d),stack:[{v:L.filter(l=>l.outcome=='done').length,c:COL.g},{v:L.filter(l=>l.outcome=='partial').length,c:COL.a},{v:L.filter(l=>l.outcome=='incomplete').length,c:COL.r}]}}).filter(x=>x.stack.some(s=>s.v));
   const calCounts={};DB.care.filter(r=>set.has(r.sid)).forEach(r=>calCounts[r.created]=(calCounts[r.created]||0)+1);
   const tStats=teachers.filter(t=>!FILT.teacher||t.id==FILT.teacher).map(t=>{const ss=studs.filter(s=>s.homeroom==t.id);const cr=DB.care.filter(r=>r.teacher==t.id&&r.created>=start&&set.has(r.sid));
-    return {t,n:ss.length,care:cr.length,pend:cr.filter(r=>!r.result&&r.follow<=TODAY).length,gap:ss.filter(s=>{const l=lastCare(s.id,t.id);return !l||diff(TODAY,l)>=DB.settings.gapDays}).length}});
+    const due=cr.filter(r=>r.follow<=TODAY);
+    return {t,n:ss.length,care:cr.length,rate:due.length?Math.round(due.filter(r=>r.result).length/due.length*100):100,pend:cr.filter(r=>!r.result&&r.follow<=TODAY).length,gap:ss.filter(s=>{const l=lastCare(s.id,t.id);return !l||diff(TODAY,l)>=DB.settings.gapDays}).length}});
   const rows=recordRows(set,start);
   const flowN={f:careP.length,a:careP.filter(r=>r.action).length,r:careP.filter(r=>r.result).length,i:careP.filter(r=>r.result=='improved').length};
   window._rows=rows;
@@ -638,7 +642,7 @@ function dashboard(){
 
   <div class="grid g5" style="margin-bottom:20px">
     <div class="card kpi">${ring(doneSet?doneN/doneSet:0,{center:todaySet.size+'명',sub:'오늘 나머지'})}<div><div class="kt">오늘 나머지</div><div class="kv">${pct(doneSet?doneN/doneSet:null)}</div><div class="ks">완료율 · 처리 ${doneSet}/${todaySet.size}</div></div></div>
-    <div class="card kpi">${ring(Math.min(1,wk.length/40),{center:wk.length,sub:'건',color:COL.b})}<div><div class="kt">이번 주 케어 기록</div><div class="kv">${wk.length}건</div><div class="ks">최근 7일</div></div></div>
+    <div class="card kpi">${ring(Math.min(1,careP.length/Math.max(1,studs.length)),{center:careP.length,sub:'건',color:COL.b})}<div><div class="kt">기간 내 케어 기록</div><div class="kv">${careP.length}건</div><div class="ks">${FILT.period=='all'?'전체 기간':'최근 '+FILT.period+'일'}</div></div></div>
     <div class="card kpi">${ring(pending.length/Math.max(1,DB.care.filter(r=>set.has(r.sid)&&r.follow<=TODAY).length),{center:pending.length,sub:'건',color:COL.a})}<div><div class="kt">결과 미입력</div><div class="kv">${pending.length}건</div><div class="ks">확인 예정일 지남</div></div></div>
     <div class="card kpi">${ring(gap.length/Math.max(1,studs.length),{center:pct(gap.length/Math.max(1,studs.length)),sub:'목표 ≤10%',color:gap.length/Math.max(1,studs.length)>.1?COL.r:COL.g})}<div><div class="kt">기록 공백 학생</div><div class="kv">${gap.length}명</div><div class="ks">${DB.settings.gapDays}일간 케어 0건</div></div></div>
     <div class="card kpi">${ring(delayed.length/Math.max(1,hcls.length),{center:delayed.length,sub:'개 반',color:COL.r})}<div><div class="kt">진도 지연 반</div><div class="kv">${delayed.length}개</div><div class="ks">계획 대비 10%p↓</div></div></div>
@@ -656,16 +660,17 @@ function dashboard(){
   <div class="grid g3" style="margin-bottom:20px">
     <div class="card"><div class="chead"><h3>나머지 결과 (최근 14일)</h3></div>${remDays.length?bars(remDays):'<div class="empty">기록 없음</div>'}
       <div class="legend" style="margin-top:10px"><span><i style="background:${COL.g}"></i>완료</span><span><i style="background:${COL.a}"></i>부분</span><span><i style="background:${COL.r}"></i>미완</span></div></div>
-    <div class="card"><div class="chead"><h3>교사별 케어 기록</h3><span class="small muted">기간 내</span></div>
-      ${bars(tStats.map(x=>({l:x.t.name,v:x.care,c:COL.g})))}
+    <div class="card"><div class="chead"><h3>교사별 결과 입력률</h3><span class="small muted">확인일 지난 기록 중</span></div>
+      ${bars(tStats.map(x=>({l:x.t.name,v:x.rate,c:x.rate<80?COL.a:COL.g})),{max:100,fmtv:v=>v+'%'})}
       <div class="small muted" style="margin-top:10px">${tStats.map(x=>`${x.t.name}: 미입력 ${x.pend} · 공백 ${x.gap}명`).join(' / ')}</div></div>
-    <div class="card"><div class="chead"><h3>9월 기록 캘린더</h3><span class="small muted">케어 기록 건수</span></div>${heatCal('2026-09',calCounts)}
+    <div class="card"><div class="chead"><h3>${+CALM.slice(5)}월 기록 캘린더</h3><button class="btn sm ghost" onclick="CALM=prevMonth(CALM);render()">‹</button><button class="btn sm ghost" ${CALM>=TODAY.slice(0,7)?'disabled':''} onclick="CALM=nextMonth(CALM);render()">›</button></div>${heatCal(CALM,calCounts)}
       <div class="legend" style="margin-top:10px"><span><i style="background:var(--surf);box-shadow:var(--inset)"></i>0</span><span><i style="background:#cdeee4"></i>1–2</span><span><i style="background:#93d9c4"></i>3–5</span><span><i style="background:var(--acc)"></i>6+</span></div></div>
   </div>
 
   <div class="grid g2" style="margin-bottom:20px">
     <div class="card"><div class="chead"><h3>위험 학생</h3><span class="bd r">${risk.length}명</span></div>
-      ${risk.length?`<div class="tblw"><table class="t"><tr><th>학생</th><th>반 · 담임</th><th>사유</th><th>단어 추이</th></tr>${risk.slice(0,12).map(({s,r})=>`<tr class="click" onclick="nav('timeline',{sid:'${s.id}'})"><td><div class="row" style="gap:8px;flex-wrap:nowrap">${avatar(s.name)}<div><b>${esc(s.name)}</b><div class="small muted">${s.grade} · ${s.school}</div></div></div></td><td class="small">${esc(CL(s.cls).name)}<br><span class="muted">${US(s.homeroom).name}</span></td><td>${r.map(([t,c])=>`<span class="bd ${c}">${t}</span>`).join(' ')}</td><td>${spark(scoresOf(s.id).slice(-10).map(x=>x.score),{ref:DB.settings.pass})}</td></tr>`).join('')}</table></div>`:'<div class="empty">위험 학생 없음</div>'}
+      ${risk.length?`<div class="tblw"><table class="t"><tr><th>학생</th><th>반 · 담임</th><th>사유</th><th>단어 추이</th></tr>${(RISKALL?risk:risk.slice(0,12)).map(({s,r})=>`<tr class="click" onclick="nav('timeline',{sid:'${s.id}'})"><td><div class="row" style="gap:8px;flex-wrap:nowrap">${avatar(s.name)}<div><b>${esc(s.name)}</b><div class="small muted">${s.grade} · ${s.school}</div></div></div></td><td class="small">${esc(CL(s.cls).name)}<br><span class="muted">${US(s.homeroom).name}</span></td><td>${r.map(([t,c])=>`<span class="bd ${c}">${t}</span>`).join(' ')}</td><td>${spark(scoresOf(s.id).slice(-10).map(x=>x.score),{ref:DB.settings.pass})}</td></tr>`).join('')}</table></div>`:'<div class="empty">위험 학생 없음</div>'}
+      ${risk.length>12?`<div class="row" style="justify-content:center;margin:4px 0 10px"><button class="btn sm" onclick="RISKALL=!RISKALL;render()">${RISKALL?'접기':`더보기 (${risk.length-12}명)`}</button></div>`:''}
       <div class="small muted">기준: 나머지 미완 ${DB.settings.incompleteRisk}회 · 4주 평균 ${DB.settings.riskDropPct}%↓ · 악화 ${DB.settings.worseRisk}건 · 공백 ${DB.settings.riskGapDays}일 (관리·설정에서 변경)</div></div>
     <div class="card"><div class="chead"><h3>진도 현황</h3><span class="small muted">5-5 규칙</span></div>
       ${hcls.filter(c=>!FILT.cls||c.id==FILT.cls).map(c=>{const p=progressOf(c);return `<div style="margin-bottom:12px"><div class="row small" style="justify-content:space-between"><span><b>${esc(c.name)}</b> <span class="muted">${dayLabel(c)} ${c.start}</span></span>${p.delayed?'<span class="bd r">지연</span>':''}</div>
@@ -697,7 +702,7 @@ function homePage(){
   const p=native?null:progressOf(c);
   const cnt={1:0,2:0,3:0,4:0};items.forEach(i=>cnt[i.top.rank]++);
   const groups=ME.role=='director'?DB.users.filter(u=>u.role=='teacher'||u.role=='native_teacher'):[ME];
-  return `<div class="card" style="margin-bottom:20px">${groups.map(u=>`<div class="row" style="margin-bottom:8px">${ME.role=='director'?`<span class="small b muted" style="width:90px">${esc(u.name)}</span>`:''}<div class="chips">${cls.filter(x=>x.teacher==u.id).map(x=>`<button class="chip ${x.id==c.id?'on':''}" onclick="HOMECLS='${x.id}';render()">${dayLabel(x)} ${x.start} · ${esc(x.name)}${isClassDay(x,TODAY)?' <span class="bd g" style="padding:1px 6px">오늘</span>':''}${DB.suggestions.some(s=>s.cls==x.id&&s.status=='pending')?'<span class="dot"></span>':''}</button>`).join('')}</div></div>`).join('')}</div>
+  return `<div class="card" style="margin-bottom:20px">${groups.map(u=>`<div class="row" style="margin-bottom:8px">${ME.role=='director'?`<span class="small b muted" style="width:90px">${esc(u.name)}</span>`:''}<div class="chips">${cls.filter(x=>x.teacher==u.id).sort(byToday).map(x=>`<button class="chip ${x.id==c.id?'on':''}" onclick="HOMECLS='${x.id}';render()">${dayLabel(x)} ${x.start} · ${esc(x.name)}${isClassDay(x,TODAY)?' <span class="bd g" style="padding:1px 6px">오늘</span>':''}${DB.suggestions.some(s=>s.cls==x.id&&s.status=='pending')?'<span class="dot"></span>':''}</button>`).join('')}</div></div>`).join('')}</div>
 
   <div class="grid g2">
    <div class="stack">
@@ -706,6 +711,7 @@ function homePage(){
         <div class="main2"><div class="nm"><a onclick="nav('timeline',{sid:'${st.id}'})">${esc(st.name)}</a></div><div class="why">${esc(t.text)}</div>${rest.length?`<div class="more">+ ${rest.map(x=>esc(x.text.split(' · ')[0].split(' — ')[0])).join(' / ')}</div>`:''}</div>
         <div class="acts">${canW?actBtn(t):''}${canW?`<button class="btn sm ghost" onclick="dismiss('${t.key}')">${ic('check',14)}확인함</button>`:''}</div></div>`).join(''):'<div class="empty">오늘 챙길 학생이 없습니다 👍</div>'}
       ${items.length>top.length?`<div class="small muted">외 ${items.length-top.length}명은 다음 순위 (최대 ${DB.settings.maxCare}명 표시)</div>`:''}
+      ${(()=>{const ids=new Set(studs.map(s=>s.id)),n=[...dismissed].filter(k=>ids.has(k.split('|')[0])).length;return n?`<button class="btn sm ghost" onclick="unhide('${c.id}')">숨긴 항목 ${n}개 다시 보기</button>`:''})()}
       <div class="small muted" style="margin-top:8px">순위: 확인(결과 입력 대기) → 경고(하락·미달·미제출·결석·나머지 미완) → 칭찬 → 공백(${DB.settings.gapDays}일 무기록)</div></div>
 
     <div class="card"><div class="chead"><h3>반 학생 ${studs.length}명</h3>${canW?`<button class="btn sm pri" onclick="openCare(null)">${ic('plus',14)}케어 기록</button>`:''}</div>
@@ -833,7 +839,7 @@ function entryPage(){
   const dr=DRAFT[sess.id];
   const entered=studs.filter(s=>dr[s.id].att=='absent'||dr[s.id].score!=='').length;
   const sugg=DB.suggestions.filter(x=>x.cls==c.id&&x.status=='pending');
-  return `<div class="card" style="margin-bottom:20px"><div class="chips">${cls.map(x=>{const pend=DB.sessions.some(s=>s.cls==x.id&&s.pending);return `<button class="chip ${x.id==c.id?'on':''}" onclick="ENT.cls='${x.id}';render()">${ME.role!='teacher'?US(x.teacher).name+' · ':''}${dayLabel(x)} ${x.start} ${esc(x.name)}${pend?' <span class="bd a" style="padding:1px 6px">입력 대기</span>':''}</button>`}).join('')}</div></div>
+  return `<div class="card" style="margin-bottom:20px"><div class="chips">${[...cls].sort(byToday).map(x=>{const pend=DB.sessions.some(s=>s.cls==x.id&&s.pending);return `<button class="chip ${x.id==c.id?'on':''}" onclick="ENT.cls='${x.id}';render()">${ME.role!='teacher'?US(x.teacher).name+' · ':''}${dayLabel(x)} ${x.start} ${esc(x.name)}${pend?' <span class="bd a" style="padding:1px 6px">입력 대기</span>':''}</button>`}).join('')}</div></div>
   <div class="grid g2">
   <div class="card"><div class="chead"><h3>${esc(c.name)} · ${md(sess.date)} ${sess.date==TODAY?'(오늘)':'(최근 수업)'}</h3>
     <span class="small muted">${sess.no?sess.no+'회차':'비정규'} · 숙제: ${sess.items.map(i=>HW[i]).join(', ')}</span></div>
@@ -1073,7 +1079,7 @@ function reportPage(){
   const cm=DB.comments[key]||(DB.comments[key]={draft:aiDraft(b),approvedBy:null,picked:b.care.filter(r=>r.result=='improved').map(r=>r.id)});
   const shBox=(x,t)=>`<div class="card flat" style="flex:1;min-width:150px"><div class="small muted b">${t}</div>${x?`<div style="margin:8px 0"><span class="bd ${x.kind=='essay'?'b':'g'}">${x.kind=='essay'?'에세이':'스피킹'}</span></div><div class="small">"${esc(x.comment)}"</div>`:'<div class="small muted" style="margin-top:8px">미선택</div>'}</div>`;
   return `<div class="card" style="margin-bottom:20px"><div class="row"><div style="width:280px"><select onchange="REP.sid=this.value;render()">${list.map(s=>`<option value="${s.id}" ${s.id==REP.sid?'selected':''}>${esc(s.name)} · ${esc(CL(s.cls).name)}</option>`).join('')}</select></div>
-    <div class="seg">${['2026-08','2026-09'].map(m=>`<button class="${REP.month==m?'on':''}" onclick="REP.month='${m}';render()">${+m.slice(5)}월</button>`).join('')}</div><span class="sp"></span>
+    <div class="seg">${reportMonths().map(m=>`<button class="${REP.month==m?'on':''}" onclick="REP.month='${m}';render()">${+m.slice(5)}월</button>`).join('')}</div><span class="sp"></span>
     <button class="btn" onclick="dlJSON()">${ic('dl',14)}JSON 내보내기</button>${ME.role=='director'?`<button class="btn" onclick="dlAll()">${ic('dl',14)}전체 학생 CSV</button>`:''}</div></div>
   <div class="grid g2">
    <div class="stack">
@@ -1082,7 +1088,8 @@ function reportPage(){
         <div class="card flat" style="text-align:center">${ring((b.word.avg||0)/30,{center:b.word.avg?.toFixed(1)??'–',sub:'단어 평균'})}<div class="small ${b.word.prev&&b.word.avg>=b.word.prev?'':'muted'}">${b.word.prev?`전월 ${b.word.prev.toFixed(1)} → ${(b.word.avg-b.word.prev>=0?'+':'')+(b.word.avg-b.word.prev).toFixed(1)}`:'전월 없음'}</div></div>
         <div class="card flat" style="text-align:center">${ring(b.homework.rate,{color:COL.b})}<div class="small muted">숙제 제출률</div></div>
         <div class="card flat" style="text-align:center">${ring(b.remedial.count?b.remedial.done/b.remedial.count:0,{center:b.remedial.count+'회',sub:'나머지',color:COL.a})}<div class="small muted">완료 ${b.remedial.done}회</div></div></div>
-      <h4 style="margin:18px 0 8px">전월 대비</h4>${bars([{l:prevMonth(REP.month).slice(5)+'월 단어',v:+(b.word.prev||0).toFixed(1),c:COL.n},{l:REP.month.slice(5)+'월 단어',v:+(b.word.avg||0).toFixed(1),c:COL.g},{l:'통과',v:b.word.pass,c:COL.b},{l:'시험 수',v:b.word.tests,c:'#b9c3c8'}],{max:30})}
+      <h4 style="margin:18px 0 8px">전월 대비</h4>${bars([{l:prevMonth(REP.month).slice(5)+'월 평균',v:+(b.word.prev||0).toFixed(1),c:COL.n},{l:REP.month.slice(5)+'월 평균',v:+(b.word.avg||0).toFixed(1),c:COL.g}],{max:30})}
+      <div class="small muted" style="margin-top:8px">단어 시험 ${b.word.tests}회 중 ${b.word.pass}회 통과 (30점 만점 기준 평균)</div>
       <h4 style="margin:18px 0 8px">대표작 비교</h4><div class="row" style="align-items:stretch">${shBox(b.showcase.prev,prevMonth(REP.month).slice(5)+'월')}${shBox(b.showcase.this,REP.month.slice(5)+'월')}</div></div>
     <div class="card"><div class="chead"><h3>리포트 후보 케어 기록</h3><span class="small muted">담임이 골라서 문장으로 가공 · 원본은 공개 안 함</span></div>
       ${b.care.length?b.care.map(r=>`<label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;cursor:pointer"><input type="checkbox" style="margin-top:12px" ${cm.picked.includes(r.id)?'checked':''} onchange="pickCare('${key}','${r.id}',this.checked)"><div style="flex:1">${careFlow(r)}</div></label>`).join(''):'<div class="empty">후보 없음</div>'}</div>
@@ -1171,6 +1178,9 @@ T('상담 요약 텍스트',()=>consultText('S1').includes(ST('S1').name));
 // Task 3
 T('초안에 부정어 없음',()=>DB.students.every(s=>{const d=aiDraft(bundle(s.id,'2026-09'));return !NEG_WORDS.some(w=>d.includes(w))}));
 T('초안에 원본 문장 없음',()=>{const r=DB.care.find(x=>x.type=='behavior'&&x.result=='improved');return !r||!aiDraft(bundle(r.sid,r.created.slice(0,7))).includes(r.finding)});
+// Task 4
+T('기간 필터가 케어 카드에 반영',()=>{FILT.period='30';ME=US('D1');const h=dashboard();FILT.period='14';return h.includes('기간 내 케어 기록')});
+T('리포트 월에 10월 포함',()=>reportMonths().includes('2026-10')&&reportMonths().includes('2026-08'));
 // Task 1
 T('버튼 두 번 눌러도 선택 유지',()=>{RS.S1={};rs('S1','att','normal');rs('S1','att','normal');return RS.S1.att=='normal'});
 T('숙제 버튼 4번 누르면 빈칸 복귀',()=>{DRAFT.x={S1:{hw:{reading:''}}};for(let i=0;i<4;i++)cycHw('x','S1','reading');return DRAFT.x.S1.hw.reading==''});
