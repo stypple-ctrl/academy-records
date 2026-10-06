@@ -62,6 +62,20 @@ h2{font-size:20px}h3{font-size:16px}h4{font-size:14px}
 .sp{flex:1}
 @media (max-width:1180px){.g5{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:980px){.g2,.g2e,.g3,.gside{grid-template-columns:1fr}}
+/* 학부모 리포트 */
+.pv{max-width:420px;margin:0 auto;background:#fff;border-radius:28px;box-shadow:var(--raise);overflow:hidden}
+.pv-top{background:var(--acc);color:#fff;padding:22px 22px 26px}
+.pv-top .ac{font-size:12px;opacity:.85;font-weight:600}.pv-top h2{color:#fff;font-size:22px;margin-top:6px}
+.pv-ban{background:var(--amber-soft);color:#a86a10;font-weight:700;font-size:12.5px;text-align:center;padding:8px}
+.pv-sec{padding:18px 22px;border-top:1px solid var(--line)}
+.pv-sec h4{margin-bottom:10px}
+.pv-story{background:var(--surf);border-radius:16px;padding:12px;margin-bottom:10px}
+.pv-story .flow .st{background:#fff}
+@media print{
+  body{background:#fff}.side,.topbar,.noprint,#toast,#modal{display:none!important}
+  .shell{display:block}.main{padding:0}.pv{box-shadow:none;border:1px solid #ddd}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 @media (max-width:820px){
   .shell{grid-template-columns:1fr}
   .side{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:12px 16px;gap:6px}
@@ -71,7 +85,7 @@ h2{font-size:20px}h3{font-size:16px}h4{font-size:14px}
 }
 
 /* buttons — soft neumorphic pills */
-.btn{border:0;border-radius:99px;padding:9px 18px;background:var(--card);box-shadow:var(--raise-sm);cursor:pointer;font-weight:600;transition:.15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn{text-decoration:none;border:0;border-radius:99px;padding:9px 18px;background:var(--card);box-shadow:var(--raise-sm);cursor:pointer;font-weight:600;transition:.15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .btn:hover{transform:translateY(-1px)}
 .btn:active{box-shadow:var(--inset);transform:none}
 .btn.pri{background:var(--acc);color:#fff}
@@ -547,7 +561,7 @@ const NAV={
   native_teacher:[['home','내 반 홈','home'],['showcase','대표작','star'],['students','내 학생','user']],
   assistant:[['remedial','오늘 나머지','run'],['entry','점수·숙제·출결','edit']]};
 const FIRST={director:'dashboard',teacher:'home',native_teacher:'home',assistant:'remedial'};
-const TITLE={dashboard:'원장 대시보드',home:'오늘 챙길 학생',entry:'점수 · 숙제 · 출결 입력',remedial:'강당 나머지 학습',students:'학생',timeline:'학생 타임라인',report:'월말 개별 리포트',admin:'관리 · 설정',showcase:'대표작 선택'};
+const TITLE={parent:'학부모 리포트 미리보기',dashboard:'원장 대시보드',home:'오늘 챙길 학생',entry:'점수 · 숙제 · 출결 입력',remedial:'강당 나머지 학습',students:'학생',timeline:'학생 타임라인',report:'월말 개별 리포트',admin:'관리 · 설정',showcase:'대표작 선택'};
 function nav(page,p={}){R={page,p};render();window.scrollTo(0,0)}
 function login(id){ME=US(id);dismissed=new Set();nav(FIRST[ME.role])}
 function logout(){ME=null;render()}
@@ -561,7 +575,7 @@ function render(){
   const d=D(TODAY);
   app.innerHTML=`<div class="shell"><aside class="side">
     <div class="logo"><span class="mk">${ic('spark',18)}</span>기록관리 <span class="demo">DEMO</span></div>
-    ${NAV[ME.role].map(([k,l,i])=>`<button class="navb ${R.page==k||(R.page=='timeline'&&k=='students')?'on':''}" onclick="nav('${k}')">${ic(i)}${l}</button>`).join('')}
+    ${NAV[ME.role].map(([k,l,i])=>`<button class="navb ${R.page==k||(R.page=='timeline'&&k=='students')||(R.page=='parent'&&k=='report')?'on':''}" onclick="nav('${k}')">${ic(i)}${l}</button>`).join('')}
     <div class="grow"></div>
     <div class="promo"><b>체험용 데모</b>데이터는 임의 생성입니다. 새로고침하면 처음 상태로 돌아갑니다.<div style="margin-top:10px"><button class="btn sm" onclick="resetDemo();render()">데이터 초기화</button></div></div>
   </aside><main class="main">
@@ -1074,15 +1088,50 @@ function aiDraft(b){
   s.push(`다음 달에는 ${a!=null&&a<24?'단어 통과 기준을 안정적으로 넘는 것':'지금의 좋은 흐름을 유지하며 독해·문법 응용'}을 목표로 지도하겠습니다.`);
   return `${n} 학생 ${+b.month.slice(5)}월 리포트\n\n`+s.join(' ');
 }
+const ACADEMY_NAME='OO영어학원';
+function commentOf(sid,m){
+  const key=sid+'|'+m;if(DB.comments[key])return DB.comments[key];
+  const b=bundle(sid,m);
+  return DB.comments[key]={draft:aiDraft(b),approvedBy:null,picked:b.care.filter(r=>r.result=='improved'||r.type=='positive').map(r=>r.id)};
+}
+const negHits=t=>NEG_WORDS.filter(w=>String(t||'').includes(w));
+// 선생님이 직접 쓴 글(코멘트·대표작 코멘트) 중 학부모 화면에 나갈 부정 표현
+function parentNegHits(sid,m){const b=bundle(sid,m);return[...new Set([...negHits(commentOf(sid,m).draft),...negHits(b.showcase.this?.comment),...negHits(b.showcase.prev?.comment)])]}
+const negWarn=h=>h.length?`<div class="card noprint" style="background:var(--red-soft);box-shadow:none;margin-bottom:14px"><b style="color:#b8432f">⚠ 부정 표현 포함: ${h.map(esc).join(', ')}</b><div class="small" style="margin-top:4px">선생님이 쓴 코멘트에 있는 표현이 학부모 화면에 그대로 나갑니다. 확인 후 고쳐주세요.</div></div>`:'';
+function parentView(sid,m){
+  const st=ST(sid),b=bundle(sid,m),cm=commentOf(sid,m),M2=+m.slice(5);
+  const pts=reportMonths().filter(x=>x<=m).slice(-3).map(x=>{const v=avg(scoresOf(sid).filter(s=>s.date.startsWith(x)));return v==null?null:{l:+x.slice(5)+'월',v:+v.toFixed(1)}}).filter(Boolean);
+  const d=b.word.avg!=null&&b.word.prev!=null?b.word.avg-b.word.prev:null;
+  const picked=b.care.filter(r=>cm.picked.includes(r.id));
+  const RES_P={improved:'좋아졌어요',same:'꾸준히 지켜보는 중',worse:'함께 노력하는 중'};
+  const story=r=>`<div class="pv-story"><div class="flow"><div class="st"><span class="k">발견</span>${AREAS[r.area]}${r.type=='positive'?' · 좋은 변화':''}</div><div class="ar">→</div><div class="st"><span class="k">함께 한 일</span>${ACTIONS[r.action]}</div><div class="ar">→</div><div class="st"><span class="k">결과</span>${r.result?RES_P[r.result]:'확인 중'}</div></div><div class="small" style="margin-top:8px">${esc(parentPhrase(r))}</div></div>`;
+  const sh=(x,t)=>`<div class="card flat" style="flex:1;min-width:140px;padding:12px"><div class="small muted b">${t}</div>${x?`<div style="margin:6px 0"><span class="bd ${x.kind=='essay'?'b':'g'}">${x.kind=='essay'?'에세이':'스피킹'}</span></div><div class="small">"${esc(x.comment)}"</div>${/^https?:/.test(x.url)?`<a class="btn sm" style="margin-top:8px" href="${esc(x.url)}" target="_blank" rel="noopener">보기</a>`:''}`:'<div class="small muted" style="margin-top:6px">아직 없어요</div>'}</div>`;
+  const rem=b.remedial;
+  return `<div class="pv">${cm.approvedBy?'':'<div class="pv-ban">미리보기 · 담임 승인 전</div>'}
+  <div class="pv-top"><div class="ac">${esc(ACADEMY_NAME)}</div><h2>${esc(st.name)} · ${M2}월 성장 리포트</h2><div class="small" style="opacity:.85;margin-top:4px">${st.grade} · 담임 ${esc(US(st.homeroom).name)} 선생님</div></div>
+  <div class="pv-sec"><h4>선생님 한마디</h4><div style="line-height:1.7">${esc(cm.draft).replace(/\n/g,'<br>')}</div></div>
+  <div class="pv-sec"><h4>단어 실력 흐름</h4>${lineChart(pts,{min:15,max:30,h:140})}<div class="b" style="margin-top:6px">${d==null?'이번 달 평균 '+(b.word.avg?.toFixed(1)??'–')+'점':d>=0?`지난달보다 +${d.toFixed(1)}점 올랐어요`:`이번 달 평균 ${b.word.avg.toFixed(1)}점, 복습 루틴을 함께 다시 잡고 있어요`}</div></div>
+  <div class="pv-sec"><h4>이번 달 이렇게 챙겼어요</h4>${picked.length?picked.map(story).join(''):'<div class="small muted">이번 달은 꾸준히 지켜보며 수업했어요.</div>'}</div>
+  <div class="pv-sec"><h4>성실함</h4><div class="row" style="justify-content:space-around">
+    <div style="text-align:center">${ring(b.homework.rate,{color:COL.b})}<div class="small muted">숙제 제출률</div></div>
+    <div style="text-align:center">${ring(rem.count?rem.done/rem.count:0,{center:rem.count+'회',sub:'보충 학습',color:COL.g})}<div class="small muted">완료 ${rem.done}회</div></div></div></div>
+  <div class="pv-sec"><h4>대표작 비교</h4><div class="row" style="align-items:stretch">${sh(b.showcase.prev,+prevMonth(m).slice(5)+'월')}${sh(b.showcase.this,M2+'월')}</div></div></div>`;
+}
+function parentPage({sid,month}){
+  if(!ME||ME.role=='assistant'||ME.role=='native_teacher')return deny();
+  const st=ST(sid);if(!st||!myStudents().includes(st))return deny();
+  return `<div class="row noprint" style="margin-bottom:16px;max-width:420px;margin-inline:auto"><button class="btn" onclick="nav('report')">← 리포트로 돌아가기</button><span class="sp"></span><button class="btn pri" onclick="window.print()">인쇄 / PDF 저장</button></div>
+  <div style="max-width:420px;margin:0 auto">${negWarn(parentNegHits(sid,month))}</div>${parentView(sid,month)}`;
+}
 function reportPage(){
   if(ME.role=='assistant'||ME.role=='native_teacher')return deny();
   const list=myStudents();if(!REP.sid||!list.find(s=>s.id==REP.sid))REP.sid=list[0].id;
   const b=bundle(REP.sid,REP.month),key=REP.sid+'|'+REP.month;
-  const cm=DB.comments[key]||(DB.comments[key]={draft:aiDraft(b),approvedBy:null,picked:b.care.filter(r=>r.result=='improved').map(r=>r.id)});
+  const cm=commentOf(REP.sid,REP.month);
   const shBox=(x,t)=>`<div class="card flat" style="flex:1;min-width:150px"><div class="small muted b">${t}</div>${x?`<div style="margin:8px 0"><span class="bd ${x.kind=='essay'?'b':'g'}">${x.kind=='essay'?'에세이':'스피킹'}</span></div><div class="small">"${esc(x.comment)}"</div>`:'<div class="small muted" style="margin-top:8px">미선택</div>'}</div>`;
   return `<div class="card" style="margin-bottom:20px"><div class="row"><div style="width:280px"><select data-nd onchange="REP.sid=this.value;render()">${list.map(s=>`<option value="${s.id}" ${s.id==REP.sid?'selected':''}>${esc(s.name)} · ${esc(CL(s.cls).name)}</option>`).join('')}</select></div>
     <div class="seg">${reportMonths().map(m=>`<button class="${REP.month==m?'on':''}" onclick="REP.month='${m}';render()">${+m.slice(5)}월</button>`).join('')}</div><span class="sp"></span>
-    <button class="btn" onclick="dlJSON()">${ic('dl',14)}JSON 내보내기</button>${ME.role=='director'?`<button class="btn" onclick="dlAll()">${ic('dl',14)}전체 학생 CSV</button>`:''}</div></div>
+    <button class="btn pri" onclick="nav('parent',{sid:REP.sid,month:REP.month})">학부모 화면 미리보기</button><button class="btn" onclick="dlJSON()">${ic('dl',14)}JSON 내보내기</button>${ME.role=='director'?`<button class="btn" onclick="dlAll()">${ic('dl',14)}전체 학생 CSV</button>`:''}</div></div>
   <div class="grid g2">
    <div class="stack">
     <div class="card"><div class="chead"><h3>${esc(b.student.name)} · ${+REP.month.slice(5)}월 데이터 묶음</h3><span class="small muted">리포트 카드 생성의 입력</span></div>
@@ -1098,7 +1147,8 @@ function reportPage(){
    </div>
    <div class="card" style="align-self:start"><div class="chead"><h3>AI 초안 코멘트</h3>${cm.approvedBy?`<span class="bd g">승인됨 · ${US(cm.approvedBy).name}</span>`:'<span class="bd a">검토 대기</span>'}</div>
      <div class="small muted" style="margin-bottom:10px">데모에서는 템플릿으로 생성합니다. 실제는 해당 학생 기록만 Claude API로 보내 생성하며, 승인 전에는 학부모에게 나가지 않습니다.</div>
-     <textarea rows="13" oninput="DB.comments['${key}'].draft=this.value">${esc(cm.draft)}</textarea>
+     ${negWarn(parentNegHits(REP.sid,REP.month))}
+     <textarea rows="13" oninput="DB.comments['${key}'].draft=this.value" onchange="render()">${esc(cm.draft)}</textarea>
      <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn" onclick="DIRTY=true;DB.comments['${key}'].draft=aiDraft(bundle(REP.sid,REP.month));render()">다시 생성</button><button class="btn pri" onclick="DIRTY=true;DB.comments['${key}'].approvedBy=ME.id;toast('승인 완료');render()">${ic('check',14)}승인</button></div></div>
   </div>`;
 }
@@ -1156,7 +1206,7 @@ function addExtra(){const t=$('#exT').value.trim();if(!t)return;DIRTY=true;DB.ex
 /* ============ toast & boot ============ */
 let tt;
 function toast(msg,err){$('#toast').innerHTML=`<div class="toast ${err?'err':''}"><span class="ck">${err?'!':'✓'}</span>${esc(msg)}</div>`;clearTimeout(tt);tt=setTimeout(()=>$('#toast').innerHTML='',2600)}
-const PAGES={dashboard,home:homePage,entry:entryPage,remedial:remedialPage,students:studentsPage,timeline:timelinePage,report:reportPage,admin:adminPage,showcase:showcasePage};
+const PAGES={parent:parentPage,dashboard,home:homePage,entry:entryPage,remedial:remedialPage,students:studentsPage,timeline:timelinePage,report:reportPage,admin:adminPage,showcase:showcasePage};
 /* ============ self test (index.html#test) ============ */
 const TESTS=[];const T=(name,fn)=>TESTS.push([name,fn]);
 function selfTest(){
@@ -1183,6 +1233,12 @@ T('초안에 원본 문장 없음',()=>{const r=DB.care.find(x=>x.type=='behavio
 // Task 4
 T('기간 필터가 케어 카드에 반영',()=>{FILT.period='30';ME=US('D1');const h=dashboard();FILT.period='14';return h.includes('기간 내 케어 기록')});
 T('리포트 월에 10월 포함',()=>reportMonths().includes('2026-10')&&reportMonths().includes('2026-08'));
+// Task 5
+T('학부모 화면 부정어 없음',()=>DB.students.slice(0,30).every(s=>{const h=parentView(s.id,'2026-09').replace(/<[^>]+>/g,'');return !NEG_WORDS.some(w=>h.includes(w))}));
+T('승인 전 표시',()=>{delete DB.comments['S1|2026-09'];return parentView('S1','2026-09').includes('담임 승인 전')});
+T('나머지 용어 숨김',()=>!parentView('S1','2026-09').includes('나머지'));
+T('학부모 화면 권한',()=>{const p=()=>parentPage({sid:'S1',month:'2026-09'}).includes('권한이 없습니다');ME=US('A1');const a=p();ME=US('N1');const b=p();ME=US('T2');const c=p();ME=US('T1');const d=p();return a&&b&&c&&!d});
+T('부정 표현 경고',()=>{ME=US('D1');REP.sid='S1';REP.month='2026-09';commentOf('S1','2026-09').draft+=' 집중력이 부족합니다.';return reportPage().includes('부정 표현')});
 // Final fix: 새로고침 경고
 T('저장 안 한 입력도 경고 대상',()=>{DRAFT.x={S1:{hw:{reading:''}}};cycHw('x','S1','reading');return DIRTY===true});
 T('검증 실패 저장은 경고 안 함',()=>{ME=US('T1');M={kind:'care',sid:'S1',area:null,type:null,finding:'',action:null};saveCare();return DIRTY===false});
