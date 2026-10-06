@@ -535,7 +535,8 @@ const avatar=(name,cls='')=>{const hue=[...name].reduce((a,c)=>a+c.charCodeAt(0)
 const careFlow=r=>`<div class="flow"><div class="st"><span class="k">발견 · ${AREAS[r.area]}/${TYPES[r.type]}</span>${esc(r.finding)}</div><div class="ar">→</div><div class="st"><span class="k">조치</span>${ACTIONS[r.action]}</div><div class="ar">→</div><div class="st"><span class="k">결과</span>${resBadge(r)} ${r.result_note?`<span class="small muted">${esc(r.result_note)}</span>`:''}</div></div>`;
 
 /* ============ app state / router ============ */
-let ME=null,R={page:'login',p:{}};
+let ME=null,R={page:'login',p:{}},DIRTY=false;
+window.addEventListener('beforeunload',e=>{if(DIRTY){e.preventDefault();e.returnValue=''}});
 const NAV={
   director:[['dashboard','대시보드','dash'],['home','반 보기','home'],['entry','점수·숙제·출결','edit'],['remedial','나머지 학습','run'],['students','학생 타임라인','user'],['report','월말 리포트','file'],['admin','관리·설정','gear']],
   teacher:[['home','내 반 홈','home'],['entry','점수·숙제·출결','edit'],['remedial','나머지 현황','run'],['students','내 학생','user'],['report','리포트 초안','file']],
@@ -546,7 +547,7 @@ const TITLE={dashboard:'원장 대시보드',home:'오늘 챙길 학생',entry:'
 function nav(page,p={}){R={page,p};render();window.scrollTo(0,0)}
 function login(id){ME=US(id);dismissed=new Set();nav(FIRST[ME.role])}
 function logout(){ME=null;render()}
-function resetDemo(){DB=buildData();dismissed=new Set();RS={};DRAFT={};toast('데모 데이터 초기화됨')}
+function resetDemo(){if(!confirm('입력한 내용이 모두 지워집니다. 초기화할까요?'))return;DIRTY=false;DB=buildData();dismissed=new Set();RS={};DRAFT={};toast('데모 데이터 초기화됨')}
 
 function render(){
   const app=$('#app');
@@ -738,6 +739,8 @@ function actBtn(t){
 function dismiss(k){dismissed.add(k);toast('오늘 목록에서 제외');render()}
 function sugSel(id,v){DB.suggestions.find(s=>s.id==id).sel=v}
 function confirmSug(cid,issue){
+  if(!issue){const n=DB.suggestions.filter(x=>x.cls==cid&&x.status=='pending').length;if(!confirm(`제안 ${n}건을 모두 보류할까요? 되돌릴 수 없습니다.`))return}
+  DIRTY=true;
   let n=0;DB.suggestions.filter(x=>x.cls==cid&&x.status=='pending').forEach(s=>{
     if(issue&&s.sel){DB.tickets.push({id:nid('TK'),sid:s.sid,issuedBy:ME.id,reason:s.reason,task:s.task,src:s.date,from:null,status:'open',avail:TODAY});s.status='issued';n++}else s.status='dismissed'});
   toast(issue?`나머지 티켓 ${n}건 발행 · 강당 명단에 추가됨`:'제안 보류');render();
@@ -746,14 +749,18 @@ function confirmSug(cid,issue){
 /* ============ modals ============ */
 let M={},MF=null;
 function showModal(fn){MF=fn;rm()}
-function rm(){$('#modal').innerHTML=MF?`<div class="mbg" onclick="if(event.target==this)closeModal()"><div class="modal">${MF()}</div></div>`:''}
+function rm(){$('#modal').innerHTML=MF?`<div class="mbg" onclick="if(event.target==this)tryClose()"><div class="modal">${MF()}</div></div>`:''}
 function closeModal(){MF=null;rm()}
+const careSnap=()=>JSON.stringify([M.area,M.type,(M.finding||'').trim(),M.action]);
+function modalDirty(){return M.kind=='care'&&careSnap()!==M._init}
+function tryClose(){if(modalDirty()&&!confirm('작성 중인 내용이 사라집니다. 닫을까요?'))return;closeModal()}
 function chips(list,cur,key){return `<div class="chips">${list.map(([v,l])=>`<button class="chip ${cur==v?'on':''}" onclick="M.${key}='${v}';rm()">${l}</button>`).join('')}</div>`}
 
 function openCare(sid,pre={}){
   if(ME.role=='director'||ME.role=='assistant')return toast('케어 기록은 교사만 입력합니다',1);
   M={kind:'care',sid,area:pre.area||null,type:pre.type||null,action:pre.action||null,finding:pre.finding||'',follow:sid?nextClassDate(ST(sid)):addDays(TODAY,2),cand:true,dkey:pre.dkey};
   if(ME.role=='native_teacher'&&M.area&&!NATIVE_AREAS.includes(M.area))M.area=null;
+  M._init=careSnap();
   showModal(careModal);
 }
 function careModal(){
@@ -771,6 +778,7 @@ function careModal(){
   <div class="mfoot"><button class="btn" onclick="closeModal()">취소</button><button class="btn pri" onclick="saveCare()">${ic('check',14)}저장</button></div>`;
 }
 function saveCare(){
+  DIRTY=true;
   const f=document.getElementById('mf');if(f)M.finding=f.value;
   if(!M.sid||!M.area||!M.type||!M.finding.trim()||!M.action)return toast('학생·영역·유형·한 줄·조치를 모두 골라주세요',1);
   DB.care.push({id:nid('CR'),sid:M.sid,teacher:ME.id,area:M.area,type:M.type,finding:M.finding.trim(),action:M.action,action_note:'',follow:M.follow,result:null,result_note:'',cand:M.cand,created:TODAY});
@@ -788,6 +796,7 @@ function resultModal(){
   <div class="mfoot"><button class="btn" onclick="closeModal()">취소</button><button class="btn pri" onclick="saveResult()">저장</button></div>`;
 }
 function saveResult(){
+  DIRTY=true;
   if(!M.result)return toast('결과를 골라주세요',1);
   const r=DB.care.find(x=>x.id==M.rid);r.result=M.result;r.result_note=M.note;closeModal();toast('결과 저장 · 목록에서 빠짐');render();
 }
@@ -802,6 +811,7 @@ function ticketModal(){
   <div class="mfoot"><button class="btn" onclick="closeModal()">취소</button><button class="btn pri" onclick="saveTicket()">발행</button></div>`;
 }
 function saveTicket(){
+  DIRTY=true;
   if(!M.task.trim())return toast('과제를 입력해주세요',1);
   DB.tickets.push({id:nid('TK'),sid:M.sid,issuedBy:ME.id,reason:M.reason,task:M.task.trim(),src:TODAY,from:null,status:'open',avail:TODAY});
   closeModal();toast('티켓 발행 · 강당 명단에 추가');render();
@@ -844,10 +854,12 @@ function entryPage(){
 const scoreBadge=v=>v===''?'':+v>=DB.settings.pass?'<span class="bd g">통과</span>':'<span class="bd r">미달</span>';
 function setAtt(ss,sid,k){DRAFT[ss][sid].att=k;render()}
 function allAtt(ss){Object.values(DRAFT[ss]).forEach(d=>d.att='present');render()}
-function setScore(ss,sid,el){let v=el.value===''?'':Math.max(0,Math.min(30,Math.round(+el.value)));DRAFT[ss][sid].score=v;document.getElementById('pb-'+sid).innerHTML=scoreBadge(v)}
-function cycHw(ss,sid,it){const o=['O','△','X'],d=DRAFT[ss][sid].hw;d[it]=o[(o.indexOf(d[it])+1)%3];render()}
+const clampScore=v=>String(v).trim()===''?'':Math.max(0,Math.min(30,Math.round(+v)||0));
+function setScore(ss,sid,el){const v=clampScore(el.value);DRAFT[ss][sid].score=v;document.getElementById('pb-'+sid).innerHTML=scoreBadge(v)}
+function cycHw(ss,sid,it){const o=['','O','△','X'],d=DRAFT[ss][sid].hw;d[it]=o[(o.indexOf(d[it])+1)%4];render()}
 function allHw(ss,it){Object.values(DRAFT[ss]).forEach(d=>{if(d.att!='absent')d.hw[it]='O'});render()}
 function saveEntry(ssid){
+  DIRTY=true;
   const sess=DB.sessions.find(s=>s.id==ssid),dr=DRAFT[ssid];
   const miss=Object.entries(dr).filter(([,d])=>d.att!='absent'&&d.score==='').map(([sid])=>ST(sid).name);
   if(miss.length)return toast('단어 점수 미입력: '+miss.join(', '),1);
@@ -909,9 +921,9 @@ function remCard(sid,ts,ro){
       <label class="toggle"><input type="checkbox" ${r.extraDone?'checked':''} onchange="RS['${sid}'].extraDone=this.checked"><i></i>완료</label></div>`:''}
     <div class="rrow"><input placeholder="메모 (선택)" value="${esc(r.memo||'')}" oninput="RS['${sid}'].memo=this.value" style="flex:1"><button class="btn pri" onclick="saveRem('${sid}')">저장</button></div>`}</div>`;
 }
-function rs(sid,k,v){RS[sid][k]=r0(RS[sid][k],v);render()}
-const r0=(cur,v)=>cur===v?undefined:v;
+function rs(sid,k,v){RS[sid][k]=v;render()}
 function saveRem(sid){
+  DIRTY=true;
   const r=RS[sid]||{},miss=[];
   if(!r.in)miss.push('입장');if(!r.out)miss.push('결과');if(!r.att)miss.push('태도');
   if(r.out=='done'&&!r.pass)miss.push('소요 시간');
@@ -1075,6 +1087,7 @@ function showcasePage(){
 }
 function pickKind(sid,k,el){const g=document.getElementById('k-'+sid);g.dataset.v=k;g.querySelectorAll('button').forEach(b=>b.classList.remove('on'));el.classList.add('on')}
 function saveShow(sid){
+  DIRTY=true;
   const c=document.getElementById('c-'+sid).value.trim();if(!c)return toast('한 줄 코멘트를 입력해주세요',1);
   DB.showcase.push({id:nid('SH'),sid,month:'2026-10',kind:document.getElementById('k-'+sid).dataset.v,url:document.getElementById('u-'+sid).value.trim()||'(링크 없음)',comment:c});toast('대표작 저장');render();
 }
@@ -1116,6 +1129,12 @@ function selfTest(){
   return{pass,fail};
 }
 T('데이터 생성',()=>DB.students.length==96&&DB.classes.length==20);
+// Task 1
+T('버튼 두 번 눌러도 선택 유지',()=>{RS.S1={};rs('S1','att','normal');rs('S1','att','normal');return RS.S1.att=='normal'});
+T('숙제 버튼 4번 누르면 빈칸 복귀',()=>{DRAFT.x={S1:{hw:{reading:''}}};for(let i=0;i<4;i++)cycHw('x','S1','reading');return DRAFT.x.S1.hw.reading==''});
+T('작성 중 케어 창 감지',()=>{M={kind:'care',area:'word',type:null,finding:'',action:null};return modalDirty()});
+T('모두 보류는 확인 거절 시 유지',()=>{window.confirm=()=>false;DB.suggestions.push({id:'SGt',cls:'C11',sid:'S1',status:'pending'});confirmSug('C11',false);return DB.suggestions.find(s=>s.id=='SGt').status=='pending'});
+T('점수 보정',()=>clampScore('-3')===0&&clampScore('31')===30&&clampScore('25.5')===26&&clampScore('')==='');
 
 DB=buildData();render();
 if(location.hash=='#test'){
