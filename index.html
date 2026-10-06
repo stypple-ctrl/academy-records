@@ -1102,6 +1102,25 @@ function addExtra(){const t=$('#exT').value.trim();if(!t)return;DB.extra.push({i
 let tt;
 function toast(msg,err){$('#toast').innerHTML=`<div class="toast ${err?'err':''}"><span class="ck">${err?'!':'✓'}</span>${esc(msg)}</div>`;clearTimeout(tt);tt=setTimeout(()=>$('#toast').innerHTML='',2600)}
 const PAGES={dashboard,home:homePage,entry:entryPage,remedial:remedialPage,students:studentsPage,timeline:timelinePage,report:reportPage,admin:adminPage,showcase:showcasePage};
+/* ============ self test (index.html#test) ============ */
+const TESTS=[];const T=(name,fn)=>TESTS.push([name,fn]);
+function selfTest(){
+  const keep={DB,ME,dismissed,RS,DRAFT,M,confirm:window.confirm};
+  const fail=[];let pass=0;
+  for(const [n,fn] of TESTS){
+    DB=buildData();ME=null;dismissed=new Set();RS={};DRAFT={};M={};
+    try{fn()===true?pass++:fail.push(n)}catch(e){fail.push(`${n} (${e.message})`)}
+    window.confirm=keep.confirm;
+  }
+  ({DB,ME,dismissed,RS,DRAFT,M}=keep);
+  return{pass,fail};
+}
+T('데이터 생성',()=>DB.students.length==96&&DB.classes.length==20);
+
 DB=buildData();render();
+if(location.hash=='#test'){
+  const r=selfTest(),msg=r.fail.length?'SELFTEST FAIL '+r.fail.join(' | '):'SELFTEST PASS '+r.pass;
+  console.log(msg);render();document.body.insertAdjacentHTML('beforeend',`<pre id="selftest">${esc(msg)}</pre>`);
+}
 </script>
 </body>
