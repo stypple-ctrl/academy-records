@@ -1049,11 +1049,18 @@ function bundle(sid,m){
     care:DB.care.filter(r=>r.sid==sid&&r.created.startsWith(m)&&r.cand),
     showcase:{this:DB.showcase.find(x=>x.sid==sid&&x.month==m)||null,prev:DB.showcase.find(x=>x.sid==sid&&x.month==pm)||null}};
 }
+const NEG_WORDS=['엎드려','잡담','산만','악화','미제출','미완','장난','부족','하락'];
+const ACT_PARENT={retest:'다시 시험을 보며',extra:'추가 과제로',oneone:'1:1로 다시 설명하며',recheck:'수업 중에 다시 확인하며',seat:'자리를 조정해 집중을 도우며',parent:'가정과 소통하며',praise:'칭찬으로 격려하며',etc:'따로 챙기며'};
+// 학부모용 문장: 원본 finding은 절대 쓰지 않는다
+function parentPhrase(r){
+  if(r.type=='positive')return `${AREAS[r.area]}에서 스스로 좋은 변화를 보여 칭찬해 주었습니다.`;
+  return `${AREAS[r.area]}에서 더 다져야 할 부분을 발견해 ${ACT_PARENT[r.action]} 함께 보완했고, 이후 좋아진 모습을 확인했습니다.`;
+}
 function aiDraft(b){
-  const n=b.student.name.slice(1),a=b.word.avg,p=b.word.prev,imp=b.care.filter(r=>r.result=='improved');
+  const n=b.student.name.slice(1),a=b.word.avg,p=b.word.prev,good=b.care.filter(r=>r.result=='improved'||r.type=='positive');
   const s=[];
-  if(a!=null&&p!=null)s.push(a>=p?`이번 달 단어 평균은 ${a.toFixed(1)}점으로 지난달(${p.toFixed(1)}점)보다 올랐습니다.`:`이번 달 단어 평균은 ${a.toFixed(1)}점으로 지난달(${p.toFixed(1)}점)보다 조금 낮아져, 복습 루틴을 함께 다시 잡고 있습니다.`);
-  imp.slice(0,2).forEach(r=>s.push(`수업 중 "${r.finding}" 부분을 발견해 ${ACTIONS[r.action]}로 챙겼고, 이후 개선된 모습을 확인했습니다.`));
+  if(a!=null&&p!=null)s.push(a>=p?`이번 달 단어 평균은 ${a.toFixed(1)}점으로 지난달(${p.toFixed(1)}점)보다 올랐습니다.`:`이번 달 단어 평균은 ${a.toFixed(1)}점이며, 복습 루틴을 함께 다시 잡고 있습니다.`);
+  good.slice(0,2).forEach(r=>s.push(parentPhrase(r)));
   if(b.homework.rate!=null)s.push(`숙제 제출률은 ${pct(b.homework.rate)}입니다.`);
   if(b.showcase.this)s.push(`이번 달 대표작(${b.showcase.this.kind=='essay'?'에세이':'스피킹'})에서는 ${b.showcase.this.comment}.`);
   s.push(`다음 달에는 ${a!=null&&a<24?'단어 통과 기준을 안정적으로 넘는 것':'지금의 좋은 흐름을 유지하며 독해·문법 응용'}을 목표로 지도하겠습니다.`);
@@ -1161,6 +1168,9 @@ T('연락처 권한',()=>{const s=ST('S1');ME=US('D1');const a=phoneOf(s);ME=US(
 T('기준값 범위',()=>!setSetting('pass','0')&&DB.settings.pass==24&&setSetting('pass','26')&&DB.settings.pass==26);
 T('원장 티켓 버튼',()=>{ME=US('D1');HOMECLS='C11';return homePage().includes('openTicket(')});
 T('상담 요약 텍스트',()=>consultText('S1').includes(ST('S1').name));
+// Task 3
+T('초안에 부정어 없음',()=>DB.students.every(s=>{const d=aiDraft(bundle(s.id,'2026-09'));return !NEG_WORDS.some(w=>d.includes(w))}));
+T('초안에 원본 문장 없음',()=>{const r=DB.care.find(x=>x.type=='behavior'&&x.result=='improved');return !r||!aiDraft(bundle(r.sid,r.created.slice(0,7))).includes(r.finding)});
 // Task 1
 T('버튼 두 번 눌러도 선택 유지',()=>{RS.S1={};rs('S1','att','normal');rs('S1','att','normal');return RS.S1.att=='normal'});
 T('숙제 버튼 4번 누르면 빈칸 복귀',()=>{DRAFT.x={S1:{hw:{reading:''}}};for(let i=0;i<4;i++)cycHw('x','S1','reading');return DRAFT.x.S1.hw.reading==''});
