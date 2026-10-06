@@ -419,6 +419,8 @@ const scoresOf=sid=>DB.scores.filter(s=>s.sid==sid).sort(byDate);
 const logsOf=sid=>DB.logs.filter(l=>l.sid==sid).sort(byDate);
 const sessionsOf=cid=>DB.sessions.filter(s=>s.cls==cid&&!s.pending);
 const termInc=sid=>DB.logs.filter(l=>l.sid==sid&&l.outcome=='incomplete'&&l.date>='2026-09-01').length;
+const stLabel=st=>`${st.name} · ${st.grade} ${CL(st.cls).name.split(' ').at(-1)}반`;
+const phoneOf=st=>ME&&(ME.role=='director'||ME.id==st.homeroom)?st.phone:st.phone.replace(/-(\d{4})-/,'-****-');
 const lastCare=(sid,tid)=>DB.care.filter(r=>r.sid==sid&&(!tid||r.teacher==tid)).map(r=>r.created).sort().at(-1);
 function studentsOf(cid){const c=CL(cid);return DB.students.filter(s=>c.type=='native'?s.nclass==cid:s.cls==cid)}
 function myStudents(){
@@ -712,7 +714,7 @@ function homePage(){
         const sh=m=>{const x=DB.showcase.find(z=>z.sid==s.id&&z.month==m);return x?`<span class="bd ${x.kind=='essay'?'b':'g'}">${x.kind=='essay'?'에세이':'스피킹'}</span>`:'<span class="bd n">미선택</span>'};
         return `<tr><td><a onclick="nav('timeline',{sid:'${s.id}'})"><b>${esc(s.name)}</b></a> <span class="small muted">${s.school}</span></td>
         ${native?`<td>${sh('2026-09')}</td><td>${sh('2026-10')}</td>`:`<td>${spark(sc.slice(-10).map(x=>x.score),{ref:DB.settings.pass})} <span class="small b">${sc.at(-1)?.score??'–'}</span></td><td><div class="row" style="flex-wrap:nowrap;gap:8px">${meter(hr,hr<.75?COL.a:COL.g)}<span class="small">${pct(hr)}</span></div></td>`}
-        <td class="small">${nc}건</td><td style="white-space:nowrap">${canW?`<button class="btn sm" onclick="openCare('${s.id}')">케어</button> ${native?'':`<button class="btn sm" onclick="openTicket('${s.id}')">티켓</button>`}`:''}</td></tr>`}).join('')}</table></div></div>
+        <td class="small">${nc}건</td><td style="white-space:nowrap">${canW?`<button class="btn sm" onclick="openCare('${s.id}')">케어</button> `:''}${(canW||ME.role=='director')&&!native?`<button class="btn sm" onclick="openTicket('${s.id}')">티켓</button>`:''}</td></tr>`}).join('')}</table></div></div>
    </div>
 
    <div class="stack">
@@ -721,12 +723,12 @@ function homePage(){
       <div class="formula" style="flex:1">진도 ${p.done}/${p.planned}회 = <b>${pct(p.pr)}</b><br>경과 ${p.el}/${p.total}일 = <b>${pct(p.er)}</b><br>${p.delayed?`<span class="bad">지연 ${Math.round((p.er-p.pr)*100)}%p</span>`:'정상 진행'}</div></div></div>`}
     ${sugg.length?`<div class="card"><div class="chead"><h3>나머지 제안 · 확정 필요</h3><span class="bd a">${sugg.length}건</span></div>
       <div class="small muted" style="margin-bottom:8px">조교 입력에서 자동 제안됨. 확정해야 티켓이 발행됩니다 (오탐 방지).</div>
-      ${sugg.map(s=>`<label class="task" style="cursor:pointer"><input type="checkbox" ${s.sel?'checked':''} onchange="sugSel('${s.id}',this.checked)"> <b>${esc(ST(s.sid).name)}</b> ${esc(s.task)} <span class="sp"></span><span class="bd ${s.def?'r':'a'}">${esc(s.reason)}</span></label>`).join('')}
+      ${sugg.map(s=>`<label class="task" style="cursor:pointer"><input type="checkbox" ${s.sel?'checked':''} onchange="sugSel('${s.id}',this.checked)"> <b>${esc(stLabel(ST(s.sid)))}</b> ${esc(s.task)} <span class="sp"></span><span class="bd ${s.def?'r':'a'}">${esc(s.reason)}</span></label>`).join('')}
       ${ME.role=='teacher'?`<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn" onclick="confirmSug('${c.id}',false)">모두 보류</button><button class="btn pri" onclick="confirmSug('${c.id}',true)">선택 확정 발행</button></div>`:''}</div>`:''}
     ${native?'':`<div class="card"><div class="chead"><h3>오늘 나머지</h3><span class="small muted">조교 입력 → 자동 요약</span></div>
       <div class="row" style="gap:16px;margin-bottom:10px;flex-wrap:nowrap">${donut([{v:tLogs.filter(l=>l.outcome=='done').length,c:COL.g,l:'완료'},{v:tLogs.filter(l=>l.outcome=='partial').length,c:COL.a,l:'부분'},{v:tLogs.filter(l=>l.outcome=='incomplete').length,c:COL.r,l:'미완'},{v:new Set(openT.map(t=>t.sid)).size,c:COL.n,l:'대기'}],{size:104,center:new Set([...openT,...tLogs].map(x=>x.sid)).size,sub:'명'})}
       <div class="stack" style="gap:6px;flex:1">${legend([{l:'완료',v:tLogs.filter(l=>l.outcome=='done').length,c:COL.g},{l:'부분',v:tLogs.filter(l=>l.outcome=='partial').length,c:COL.a},{l:'미완',v:tLogs.filter(l=>l.outcome=='incomplete').length,c:COL.r},{l:'대기',v:new Set(openT.map(t=>t.sid)).size,c:COL.n}])}</div></div>
-      ${tLogs.map(l=>`<div class="task">${outBadge(l.outcome)} <b>${esc(ST(l.sid).name)}</b> ${esc(l.task)} <span class="sp"></span><span class="small muted">${PASS[l.pass]} · ${ATT[l.att]}</span></div>`).join('')}
+      ${tLogs.map(l=>`<div class="task">${outBadge(l.outcome)} <b>${esc(stLabel(ST(l.sid)))}</b> ${esc(l.task)} <span class="sp"></span><span class="small muted">${PASS[l.pass]} · ${ATT[l.att]}</span></div>`).join('')}
       ${openT.length?`<div class="small muted" style="margin-top:8px">대기: ${[...new Set(openT.map(t=>ST(t.sid).name))].join(', ')}</div>`:''}</div>`}
    </div>
   </div>`;
@@ -837,7 +839,7 @@ function entryPage(){
     <span class="small muted">${sess.no?sess.no+'회차':'비정규'} · 숙제: ${sess.items.map(i=>HW[i]).join(', ')}</span></div>
     ${ro?'<div class="small muted" style="margin-bottom:8px">원장은 조회만 가능합니다.</div>':''}
     <div class="tblw"><table class="t"><tr><th>학생</th><th>출결 <button class="btn sm ghost" ${ro?'disabled':''} onclick="allAtt('${sess.id}')">모두 출석</button></th><th>단어 /30</th>${sess.items.map(it=>`<th style="text-align:center">${HW[it]}<br><button class="btn sm ghost" style="padding:2px 6px" ${ro?'disabled':''} onclick="allHw('${sess.id}','${it}')">전체 O</button></th>`).join('')}</tr>
-    ${studs.map(s=>{const d=dr[s.id],ab=d.att=='absent';return `<tr><td><b>${esc(s.name)}</b></td>
+    ${studs.map(s=>{const d=dr[s.id],ab=d.att=='absent';return `<tr><td><b>${esc(stLabel(s))}</b></td>
       <td><div class="seg">${[['present','출석','g'],['late','지각','a'],['absent','결석','r']].map(([k,l,cc])=>`<button class="${d.att==k?'on '+cc:''}" ${ro?'disabled':''} onclick="setAtt('${sess.id}','${s.id}','${k}')">${l}</button>`).join('')}</div></td>
       <td><div class="row" style="flex-wrap:nowrap;gap:6px"><input class="scin" type="number" min="0" max="30" value="${d.score}" ${ab||ro?'disabled':''} oninput="setScore('${sess.id}','${s.id}',this)"><span id="pb-${s.id}">${scoreBadge(d.score)}</span></div></td>
       ${sess.items.map(it=>`<td style="text-align:center"><button class="hwb ${d.hw[it]}" ${ab||ro?'disabled':''} onclick="cycHw('${sess.id}','${s.id}','${it}')">${d.hw[it]||'·'}</button></td>`).join('')}</tr>`}).join('')}</table></div>
@@ -848,7 +850,7 @@ function entryPage(){
     <div class="card"><div class="chead"><h3>자동 제안 규칙</h3></div>
       <div class="formula">단어 &lt; <b>${DB.settings.pass}</b>/30 → "단어 재시험" 제안<br>숙제 <b>X</b> → 해당 과제 티켓 제안<br>숙제 <b>△</b> → 교사 판단 (기본 해제)<br>→ <b>담임 확정</b> 후 발행</div></div>
     <div class="card"><div class="chead"><h3>확정 대기 제안</h3><span class="bd a">${sugg.length}건</span></div>
-      ${sugg.length?sugg.map(s=>`<div class="task"><b>${esc(ST(s.sid).name)}</b> ${esc(s.task)}<span class="sp"></span><span class="bd ${s.def?'r':'a'}">${s.def?'제안':'판단'}</span></div>`).join('')+(ME.role=='teacher'?`<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn sm" onclick="HOMECLS='${c.id}';nav('home')">내 반 홈에서 확정하기 →</button></div>`:'<div class="small muted" style="margin-top:8px">담임 선생님 화면으로 전송됨</div>'):'<div class="empty">없음</div>'}</div>
+      ${sugg.length?sugg.map(s=>`<div class="task"><b>${esc(stLabel(ST(s.sid)))}</b> ${esc(s.task)}<span class="sp"></span><span class="bd ${s.def?'r':'a'}">${s.def?'제안':'판단'}</span></div>`).join('')+(ME.role=='teacher'?`<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn sm" onclick="HOMECLS='${c.id}';nav('home')">내 반 홈에서 확정하기 →</button></div>`:'<div class="small muted" style="margin-top:8px">담임 선생님 화면으로 전송됨</div>'):'<div class="empty">없음</div>'}</div>
   </div></div>`;
 }
 const scoreBadge=v=>v===''?'':+v>=DB.settings.pass?'<span class="bd g">통과</span>':'<span class="bd r">미달</span>';
@@ -900,7 +902,7 @@ function remedialPage(){
   ${ro?`<div class="card in" style="margin-bottom:20px"><span class="small">조회 화면입니다. 결과 입력은 <b>조교</b> 역할에서 할 수 있습니다.</span></div>`:''}
   <div class="rgrid">${Object.entries(by).map(([sid,ts])=>remCard(sid,ts,ro)).join('')||'<div class="card empty">대기 학생이 없습니다</div>'}</div>
   <div class="card" style="margin-top:20px"><div class="chead"><h3>오늘 처리 결과</h3><span class="small muted">담당 교사 화면에 자동 요약됩니다</span></div>
-    ${nD?`<div class="tblw"><table class="t"><tr><th>학생</th><th>과제</th><th>결과</th><th>소요</th><th>태도</th><th>추가 과제</th></tr>${tl.map(l=>`<tr><td><b>${esc(ST(l.sid).name)}</b></td><td>${esc(l.task)}</td><td>${outBadge(l.outcome)}</td><td class="small">${PASS[l.pass]}</td><td class="small">${ATT[l.att]}</td><td class="small">${l.extra?esc(DB.extra.find(e=>e.id==l.extra)?.title)+(l.extraDone?' ✓':''):'–'}</td></tr>`).join('')}</table></div>`:'<div class="empty">아직 없음</div>'}</div>`;
+    ${nD?`<div class="tblw"><table class="t"><tr><th>학생</th><th>과제</th><th>결과</th><th>소요</th><th>태도</th><th>추가 과제</th></tr>${tl.map(l=>`<tr><td><b>${esc(stLabel(ST(l.sid)))}</b></td><td>${esc(l.task)}</td><td>${outBadge(l.outcome)}</td><td class="small">${PASS[l.pass]}</td><td class="small">${ATT[l.att]}</td><td class="small">${l.extra?esc(DB.extra.find(e=>e.id==l.extra)?.title)+(l.extraDone?' ✓':''):'–'}</td></tr>`).join('')}</table></div>`:'<div class="empty">아직 없음</div>'}</div>`;
 }
 function remCard(sid,ts,ro){
   const st=ST(sid),r=RS[sid]||(RS[sid]={});
@@ -908,7 +910,7 @@ function remCard(sid,ts,ro){
   const stages=STAGE.map((l,i)=>[String(i),l]);
   const ex=DB.extra.filter(e=>e.active&&(e.level=='all'||e.level==st.level));
   const taps=['in','out','pass','att'].filter(k=>r[k]).length;
-  return `<div class="card rc"><div class="row">${avatar(st.name)}<div class="sp"><div class="b" style="font-size:16px">${esc(st.name)}</div><div class="small muted">과제 ${ts.length}건</div></div>
+  return `<div class="card rc"><div class="row">${avatar(st.name)}<div class="sp"><div class="b" style="font-size:16px">${esc(stLabel(st))}</div><div class="small muted">과제 ${ts.length}건</div></div>
     ${ro?'<span class="bd n">대기</span>':`<div class="stepper">${[0,1,2,3].map(i=>`<i class="${i<taps?'on':''}"></i>`).join('')}</div>`}</div>
     ${ts.map(t=>`<div class="task">${t.from?'<span class="bd a">이월</span>':'<span class="bd b">오늘</span>'} ${esc(t.task)}</div>`).join('')}
     ${ro?'':`<div class="rrow"><span class="lab">입장</span>${r.in?`<span class="bd g">${r.in} 입장</span>`:`<button class="btn sm pri" onclick="rs('${sid}','in',nowHM())">입장 체크</button>`}</div>
@@ -977,7 +979,7 @@ function timelinePage({sid}){
         <div class="row"><span class="muted" style="width:60px">담임반</span><b>${esc(CL(st.cls).name)}</b></div>
         <div class="row"><span class="muted" style="width:60px">담임</span>${US(st.homeroom).name}</div>
         <div class="row"><span class="muted" style="width:60px">원어민</span>${esc(CL(st.nclass).name)}</div>
-        <div class="row"><span class="muted" style="width:60px">학부모</span>${st.phone.replace(/-(\d{4})-/,'-****-')}</div></div>
+        <div class="row"><span class="muted" style="width:60px">학부모</span>${phoneOf(st)}</div></div>
       <div class="stack" style="gap:8px;margin-top:16px"><button class="btn pri" onclick="openConsult('${sid}')">${ic('spark',14)}상담 요약</button>${canW?`<button class="btn" onclick="openCare('${sid}')">${ic('plus',14)}케어 기록</button>`:''}<button class="btn" onclick="REP.sid='${sid}';nav('report')">${ic('file',14)}리포트 데이터</button></div></div>
     <div class="card"><h4 style="margin-bottom:12px">최근 4주</h4><div class="grid g2e" style="gap:14px;justify-items:center">
       <div style="text-align:center">${ring((avg(r4)||0)/30,{center:avg(r4)?.toFixed(1)??'–',sub:'/30 평균'})}<div class="small muted">단어 평균</div></div>
@@ -992,7 +994,7 @@ function timelinePage({sid}){
       <div class="tl">${Object.entries(grp).slice(0,25).map(([d,es])=>`<div class="tld">${md(d)} (${WD[D(d).getDay()]})</div>${es.map(e=>`<div class="ev"><span class="ic" style="${icC[e.c]}">${e.ic}</span><div style="flex:1;min-width:0">${e.h}</div></div>`).join('')}`).join('')||'<div class="empty">기록 없음</div>'}</div></div>
    </div></div>`;
 }
-function openConsult(sid){
+function consultData(sid){
   const st=ST(sid),sc=scoresOf(sid),r4=sc.filter(x=>x.date>addDays(TODAY,-28)),p4=sc.filter(x=>x.date<=addDays(TODAY,-28)&&x.date>addDays(TODAY,-56));
   const a=avg(r4),b=avg(p4),hw=DB.hw.filter(h=>h.sid==sid&&h.date>addDays(TODAY,-28)),hr=hw.length?hw.filter(h=>h.status=='O').length/hw.length:0;
   const care=DB.care.filter(r=>r.sid==sid&&r.created>addDays(TODAY,-28)),lg=DB.logs.filter(l=>l.sid==sid&&l.date>addDays(TODAY,-28));
@@ -1004,6 +1006,24 @@ function openConsult(sid){
   if(lg.some(l=>l.outcome=='incomplete'))pts.push('나머지 학습 미완료 귀가가 있었습니다. 이월 과제 진행 상황을 공유해 주세요.');
   if(care.some(r=>r.result=='improved'))pts.push(`"${care.find(r=>r.result=='improved').finding}" 부분은 조치 후 개선됐습니다 — 학부모에게 근거로 전달하기 좋습니다.`);
   if(!pts.length)pts.push('특이 신호 없이 안정적입니다. 대표작 성장 포인트 위주로 상담하세요.');
+  return{st,sc,a,b,hr,care,lg,sh,pts};
+}
+function consultText(sid){
+  const d=consultData(sid);
+  return[`[상담 요약] ${d.st.name} (${d.st.grade} · ${CL(d.st.cls).name}) · ${TODAY}`,
+    `단어 4주 평균 ${d.a?.toFixed(1)??'–'}/30${d.b?` (이전 4주 ${d.b.toFixed(1)})`:''}`,
+    `숙제 제출률 ${pct(d.hr)} · 나머지 ${d.lg.length}회 (완료 ${d.lg.filter(l=>l.outcome=='done').length}회)`,
+    `케어 기록 ${d.care.length}건`,...d.care.map(r=>`- ${md(r.created)} ${AREAS[r.area]}: ${r.finding} → ${ACTIONS[r.action]} → ${r.result?RESULTS[r.result]:'결과 대기'}`),
+    d.sh?`최근 대표작: ${+d.sh.month.slice(5)}월 ${d.sh.kind=='essay'?'에세이':'스피킹'} — ${d.sh.comment}`:'',
+    '상담 포인트',...d.pts.map(p=>'- '+p)].filter(Boolean).join('\n');
+}
+function copyConsult(sid){
+  const t=consultText(sid);
+  if(!navigator.clipboard)return toast('이 브라우저에서는 복사가 막혀 있습니다',1);
+  navigator.clipboard.writeText(t).then(()=>toast('상담 요약 복사됨'),()=>toast('복사가 막혔습니다. 브라우저 권한을 확인하세요',1));
+}
+function openConsult(sid){
+  const{st,sc,a,b,hr,care,lg,sh,pts}=consultData(sid);
   M={};showModal(()=>`<div class="row"><h3 class="sp">상담 요약 · ${esc(st.name)}</h3><span class="bd b">AI 요약 (데모: 실제는 Claude API)</span></div>
   <div class="grid g3" style="gap:12px;margin-top:16px">
    <div class="card flat" style="text-align:center">${ring((a||0)/30,{center:a?.toFixed(1)??'–',sub:'4주 평균'})}<div class="small muted">${b?`이전 4주 ${b.toFixed(1)} (${a-b>=0?'+':''}${(a-b).toFixed(1)})`:''}</div></div>
@@ -1013,7 +1033,7 @@ function openConsult(sid){
   <h4 style="margin:14px 0 8px">케어 기록 (4주) ${care.length}건</h4>${care.map(r=>`<div style="margin-bottom:8px">${careFlow(r)}</div>`).join('')||'<div class="small muted">없음</div>'}
   ${sh?`<h4 style="margin:14px 0 6px">최근 대표작</h4><div class="small">${+sh.month.slice(5)}월 ${sh.kind=='essay'?'에세이':'스피킹'} — "${esc(sh.comment)}"</div>`:''}
   <h4 style="margin:16px 0 8px">상담 포인트</h4><div class="formula" style="font-family:inherit;font-size:13px">${pts.map(p=>'• '+esc(p)).join('<br>')}</div>
-  <div class="mfoot"><button class="btn" onclick="closeModal()">닫기</button></div>`);
+  <div class="mfoot"><button class="btn" onclick="copyConsult('${sid}')">복사</button><button class="btn" onclick="closeModal()">닫기</button></div>`);
 }
 
 /* ============ 월말 리포트 (F10) ============ */
@@ -1100,14 +1120,20 @@ function adminPage(){
   const SET=[['pass','단어 통과 기준 (30문항 중)','개'],['dropPct','점수 하락 경고 (최근 3회 평균 대비)','%'],['gapDays','기록 공백 기준','일'],['fastPass','나머지 10분 통과 경고 (4주)','회'],['maxCare','오늘 챙길 학생 최대','명'],['incompleteRisk','위험: 나머지 미완 누적 (학기)','회'],['riskDropPct','위험: 4주 평균 하락','%'],['worseRisk','위험: 결과 악화','건'],['riskGapDays','위험: 기록 공백','일']];
   const tab=`<div class="seg" style="margin-bottom:20px">${[['settings','기준값 설정'],['extra','추가 과제 메뉴'],['students','학생·반'],['users','사용자']].map(([k,l])=>`<button class="${ADM==k?'on':''}" onclick="ADM='${k}';render()">${l}</button>`).join('')}</div>`;
   if(ADM=='settings')return tab+`<div class="card"><div class="chead"><h3>자동 규칙 기준값</h3><span class="small muted">시범 운영 초기값 · 바꾸면 모든 화면에 바로 반영</span></div>
-    <div class="grid g3" style="gap:14px">${SET.map(([k,l,u])=>`<div class="card flat"><div class="small muted b">${l}</div><div class="row" style="margin-top:8px;flex-wrap:nowrap"><input type="number" value="${S[k]}" onchange="DB.settings['${k}']=+this.value;toast('저장됨')"><span class="muted">${u}</span></div></div>`).join('')}</div></div>`;
+    <div class="grid g3" style="gap:14px">${SET.map(([k,l,u])=>`<div class="card flat"><div class="small muted b">${l}</div><div class="row" style="margin-top:8px;flex-wrap:nowrap"><input type="number" value="${S[k]}" onchange="if(!setSetting('${k}',this.value))this.value=DB.settings['${k}']"><span class="muted">${u}</span></div></div>`).join('')}</div></div>`;
   if(ADM=='extra')return tab+`<div class="card"><div class="chead"><h3>추가 과제 바구니 (레벨별 고정 메뉴)</h3></div>
     ${DB.extra.map(e=>`<div class="task"><span class="bd n">${e.level=='all'?'전체':e.level}</span> ${esc(e.title)}<span class="sp"></span><label class="toggle"><input type="checkbox" ${e.active?'checked':''} onchange="DB.extra.find(x=>x.id=='${e.id}').active=this.checked"><i></i></label></div>`).join('')}
     <div class="row" style="margin-top:14px;flex-wrap:nowrap"><select id="exL" style="width:150px"><option value="all">전체</option>${['Starter','Basic','Inter','Advanced','Master'].map(l=>`<option>${l}</option>`).join('')}</select><input id="exT" placeholder="새 과제"><button class="btn pri" onclick="addExtra()">추가</button></div></div>`;
   if(ADM=='users')return tab+`<div class="card"><div class="chead"><h3>사용자</h3><span class="small muted">퇴사 조교 계정은 즉시 비활성화</span></div>
     <div class="tblw"><table class="t"><tr><th>이름</th><th>역할</th><th>활성</th></tr>${DB.users.map(u=>`<tr><td><div class="row" style="gap:8px">${avatar(u.name)}<b>${esc(u.name)}</b></div></td><td>${ROLE[u.role]}</td><td><label class="toggle"><input type="checkbox" ${u.active?'checked':''} ${u.id==ME.id?'disabled':''} onchange="DB.users.find(x=>x.id=='${u.id}').active=this.checked;toast(this.checked?'활성화':'비활성화')"><i></i></label></td></tr>`).join('')}</table></div></div>`;
   return tab+`<div class="card"><div class="chead"><h3>학생 ${DB.students.length}명 · 반 ${DB.classes.length}개</h3><button class="btn" onclick="toast('데모에서는 CSV 가져오기가 동작하지 않습니다',1)">${ic('dl',14)}구글 시트 CSV 가져오기</button><button class="btn pri" onclick="toast('데모: 학생 등록 폼은 다음 단계',1)">${ic('plus',14)}학생 등록</button></div>
-    <div class="tblw"><table class="t"><tr><th>이름</th><th>학년</th><th>학교</th><th>담임반</th><th>담임</th><th>원어민반</th><th>상태</th><th>학부모</th></tr>${DB.students.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${s.grade}</td><td>${s.school}</td><td class="small">${dayLabel(CL(s.cls))} ${CL(s.cls).start} ${esc(CL(s.cls).name)}</td><td>${US(s.homeroom).name}</td><td class="small">${esc(CL(s.nclass).name)}</td><td><span class="bd g">${s.status}</span></td><td class="small muted">${s.phone.replace(/-(\d{4})-/,'-****-')}</td></tr>`).join('')}</table></div></div>`;
+    <div class="tblw"><table class="t"><tr><th>이름</th><th>학년</th><th>학교</th><th>담임반</th><th>담임</th><th>원어민반</th><th>상태</th><th>학부모</th></tr>${DB.students.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${s.grade}</td><td>${s.school}</td><td class="small">${dayLabel(CL(s.cls))} ${CL(s.cls).start} ${esc(CL(s.cls).name)}</td><td>${US(s.homeroom).name}</td><td class="small">${esc(CL(s.nclass).name)}</td><td><span class="bd g">${s.status}</span></td><td class="small muted">${phoneOf(s)}</td></tr>`).join('')}</table></div></div>`;
+}
+const SETTING_RANGE={pass:[10,30],dropPct:[5,50],gapDays:[3,60],fastPass:[1,10],maxCare:[3,10],incompleteRisk:[1,10],riskDropPct:[5,50],worseRisk:[1,10],riskGapDays:[7,90]};
+function setSetting(k,v){
+  const [mn,mx]=SETTING_RANGE[k],n=Number(v);
+  if(String(v).trim()===''||!Number.isInteger(n)||n<mn||n>mx){toast(`${mn}~${mx} 사이 숫자만 가능합니다`,1);return false}
+  DB.settings[k]=n;DIRTY=true;toast('저장됨');return true;
 }
 function addExtra(){const t=$('#exT').value.trim();if(!t)return;DB.extra.push({id:nid('E'),level:$('#exL').value,title:t,active:true});toast('추가됨');render()}
 
@@ -1129,6 +1155,12 @@ function selfTest(){
   return{pass,fail};
 }
 T('데이터 생성',()=>DB.students.length==96&&DB.classes.length==20);
+// Task 2
+T('동명이인 구분',()=>{const g={};DB.students.forEach(s=>(g[s.name]=g[s.name]||[]).push(stLabel(s)));return Object.values(g).every(a=>new Set(a).size==a.length)});
+T('연락처 권한',()=>{const s=ST('S1');ME=US('D1');const a=phoneOf(s);ME=US('T2');const b=phoneOf(s);return !a.includes('*')&&b.includes('*')});
+T('기준값 범위',()=>!setSetting('pass','0')&&DB.settings.pass==24&&setSetting('pass','26')&&DB.settings.pass==26);
+T('원장 티켓 버튼',()=>{ME=US('D1');HOMECLS='C11';return homePage().includes('openTicket(')});
+T('상담 요약 텍스트',()=>consultText('S1').includes(ST('S1').name));
 // Task 1
 T('버튼 두 번 눌러도 선택 유지',()=>{RS.S1={};rs('S1','att','normal');rs('S1','att','normal');return RS.S1.att=='normal'});
 T('숙제 버튼 4번 누르면 빈칸 복귀',()=>{DRAFT.x={S1:{hw:{reading:''}}};for(let i=0;i<4;i++)cycHw('x','S1','reading');return DRAFT.x.S1.hw.reading==''});
