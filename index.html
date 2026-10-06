@@ -1076,7 +1076,7 @@ const ACT_PARENT={retest:'다시 시험을 보며',extra:'추가 과제로',oneo
 // 학부모용 문장: 원본 finding은 절대 쓰지 않는다
 function parentPhrase(r){
   if(r.type=='positive')return `${AREAS[r.area]}에서 스스로 좋은 변화를 보여 칭찬해 주었습니다.`;
-  return `${AREAS[r.area]}에서 더 다져야 할 부분을 발견해 ${ACT_PARENT[r.action]} 함께 보완했고, 이후 좋아진 모습을 확인했습니다.`;
+  return `${AREAS[r.area]}에서 더 다져야 할 부분을 발견해 ${ACT_PARENT[r.action]} 함께 보완했고, ${r.result=='improved'?'이후 좋아진 모습을 확인했습니다.':'계속 함께 지켜보고 있습니다.'}`;
 }
 function aiDraft(b){
   const n=b.student.name.slice(1),a=b.word.avg,p=b.word.prev,good=b.care.filter(r=>r.result=='improved'||r.type=='positive');
@@ -1145,12 +1145,18 @@ function reportPage(){
     <div class="card"><div class="chead"><h3>리포트 후보 케어 기록</h3><span class="small muted">담임이 골라서 문장으로 가공 · 원본은 공개 안 함</span></div>
       ${b.care.length?b.care.map(r=>`<label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;cursor:pointer"><input type="checkbox" style="margin-top:12px" ${cm.picked.includes(r.id)?'checked':''} onchange="pickCare('${key}','${r.id}',this.checked)"><div style="flex:1">${careFlow(r)}</div></label>`).join(''):'<div class="empty">후보 없음</div>'}</div>
    </div>
-   <div class="card" style="align-self:start"><div class="chead"><h3>AI 초안 코멘트</h3>${cm.approvedBy?`<span class="bd g">승인됨 · ${US(cm.approvedBy).name}</span>`:'<span class="bd a">검토 대기</span>'}</div>
+   <div class="card" style="align-self:start"><div class="chead"><h3>AI 초안 코멘트</h3><span id="apvbadge">${cm.approvedBy?`<span class="bd g">승인됨 · ${US(cm.approvedBy).name}</span>`:'<span class="bd a">검토 대기</span>'}</span></div>
      <div class="small muted" style="margin-bottom:10px">데모에서는 템플릿으로 생성합니다. 실제는 해당 학생 기록만 Claude API로 보내 생성하며, 승인 전에는 학부모에게 나가지 않습니다.</div>
-     ${negWarn(parentNegHits(REP.sid,REP.month))}
-     <textarea rows="13" oninput="DB.comments['${key}'].draft=this.value" onchange="render()">${esc(cm.draft)}</textarea>
+     <div id="negwarn">${negWarn(parentNegHits(REP.sid,REP.month))}</div>
+     <textarea rows="13" oninput="draftInput('${key}',this.value)">${esc(cm.draft)}</textarea>
      <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn" onclick="DIRTY=true;DB.comments['${key}'].draft=aiDraft(bundle(REP.sid,REP.month));render()">다시 생성</button><button class="btn pri" onclick="DIRTY=true;DB.comments['${key}'].approvedBy=ME.id;toast('승인 완료');render()">${ic('check',14)}승인</button></div></div>
   </div>`;
+}
+// 다시 그리지 않고 고친다: 다시 그리면 바로 다음 버튼 클릭이 사라짐
+function draftInput(key,v){
+  const c=DB.comments[key];c.draft=v;
+  if(c.approvedBy){c.approvedBy=null;const b=document.getElementById('apvbadge');if(b)b.innerHTML='<span class="bd a">검토 대기 · 수정됨</span>'}
+  const w=document.getElementById('negwarn');if(w)w.innerHTML=negWarn(parentNegHits(REP.sid,REP.month));
 }
 function pickCare(key,id,v){const p=DB.comments[key].picked;if(v)p.push(id);else p.splice(p.indexOf(id),1)}
 function dlJSON(){const b=bundle(REP.sid,REP.month),cm=DB.comments[REP.sid+'|'+REP.month];
@@ -1233,6 +1239,12 @@ T('초안에 원본 문장 없음',()=>{const r=DB.care.find(x=>x.type=='behavio
 // Task 4
 T('기간 필터가 케어 카드에 반영',()=>{FILT.period='30';ME=US('D1');const h=dashboard();FILT.period='14';return h.includes('기간 내 케어 기록')});
 T('리포트 월에 10월 포함',()=>reportMonths().includes('2026-10')&&reportMonths().includes('2026-08'));
+// Stage 2 final fix
+T('코멘트 수정 후 첫 클릭 유지·경고 즉시 갱신',()=>{ME=US('D1');REP.sid='S1';REP.month='2026-09';nav('report');const ta=document.querySelector('textarea');
+  ta.value='집중력이 부족함';ta.dispatchEvent(new Event('input',{bubbles:true}));return !document.querySelector('textarea[onchange]')&&document.getElementById('negwarn').innerHTML.includes('부정 표현')});
+T('승인 후 고치면 승인 해제',()=>{ME=US('D1');REP.sid='S1';REP.month='2026-09';commentOf('S1','2026-09').approvedBy='D1';nav('report');const ta=document.querySelector('textarea');
+  ta.value+=' 추가';ta.dispatchEvent(new Event('input',{bubbles:true}));return DB.comments['S1|2026-09'].approvedBy===null});
+T('결과별 학부모 문장',()=>{const r={type:'drop',area:'word',action:'retest'};return parentPhrase({...r,result:'improved'}).includes('좋아진')&&!parentPhrase({...r,result:'worse'}).includes('좋아진')&&!parentPhrase({...r,result:null}).includes('좋아진')});
 // Task 5
 T('학부모 화면 부정어 없음',()=>DB.students.slice(0,30).every(s=>{const h=parentView(s.id,'2026-09').replace(/<[^>]+>/g,'');return !NEG_WORDS.some(w=>h.includes(w))}));
 T('승인 전 표시',()=>{delete DB.comments['S1|2026-09'];return parentView('S1','2026-09').includes('담임 승인 전')});
