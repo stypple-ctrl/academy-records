@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>학원 기록관리 · 데모</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --bg:#eceff1;--surf:#f4f6f7;--card:#f8f9fa;--line:#e2e6e9;--text:#1f2a2e;--muted:#7a868c;--faint:#a8b2b7;
+  --acc:#2ea58a;--acc2:#5cc5ac;--acc-soft:#dcf1ea;--acc-ink:#1b7a65;
+  --red:#e0654f;--red-soft:#fbe6e1;--amber:#e09a2f;--amber-soft:#fbefd9;--blue:#4b7bd8;--blue-soft:#e3ebfa;--gray-soft:#e7eaec;
+  --raise:6px 6px 14px rgba(160,170,178,.38),-6px -6px 14px rgba(255,255,255,.95);
+  --raise-sm:3px 3px 7px rgba(160,170,178,.35),-3px -3px 7px rgba(255,255,255,.95);
+  --inset:inset 3px 3px 7px rgba(160,170,178,.38),inset -3px -3px 7px rgba(255,255,255,.95);
+  --r:18px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit;cursor:pointer}
+.small{font-size:12px}.muted{color:var(--muted)}.b{font-weight:700}
+h1,h2,h3,h4{margin:0;letter-spacing:-.01em}
+h2{font-size:20px}h3{font-size:16px}h4{font-size:14px}
+
+/* layout */
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.side{padding:22px 16px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;padding:4px 10px 18px}
+.logo .mk{width:32px;height:32px;border-radius:10px;background:var(--acc);color:#fff;display:grid;place-items:center;box-shadow:var(--raise-sm)}
+.logo .demo{font-size:10px;font-weight:700;color:var(--acc-ink);background:var(--acc-soft);padding:2px 7px;border-radius:99px}
+.navb{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:14px;border:0;background:transparent;cursor:pointer;text-align:left;color:var(--muted);font-weight:600;white-space:nowrap}
+.navb svg{width:18px;height:18px;flex:none}
+.navb:hover{color:var(--text)}
+.navb.on{background:var(--acc);color:#fff;box-shadow:var(--raise-sm)}
+.side .grow{flex:1}
+.promo{border-radius:var(--r);background:var(--acc-soft);padding:16px;font-size:12px;color:var(--acc-ink)}
+.promo b{display:block;font-size:14px;margin-bottom:4px;color:var(--text)}
+.main{padding:22px 28px 60px;min-width:0}
+.topbar{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+.topbar .ttl{flex:1;min-width:200px}
+.topbar .crumb{font-size:12px;color:var(--muted)}
+.me{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 6px;border-radius:99px;background:var(--card);box-shadow:var(--raise-sm)}
+.av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;background:var(--acc);font-size:13px;flex:none}
+.av.lg{width:84px;height:84px;font-size:30px;border-radius:24px}
+.me .nm{font-weight:700;font-size:13px;line-height:1.1}.me .rl{font-size:11px;color:var(--muted)}
+.datechip{font-size:12px;color:var(--muted);padding:8px 14px;border-radius:99px;box-shadow:var(--inset);background:var(--surf)}
+
+/* cards & grid */
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--raise);padding:18px 20px;min-width:0}
+.card.flat{box-shadow:none;background:var(--surf)}
+.card.in{box-shadow:var(--inset);background:var(--surf)}
+.chead{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.chead h3{flex:1}
+.grid{display:grid;gap:20px}
+.g2{grid-template-columns:1.35fr 1fr}.g2e{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}.g5{grid-template-columns:repeat(5,1fr)}
+.gside{grid-template-columns:300px 1fr}
+.stack{display:flex;flex-direction:column;gap:20px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+@media (max-width:1180px){.g5{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:980px){.g2,.g2e,.g3,.gside{grid-template-columns:1fr}}
+@media (max-width:820px){
+  .shell{grid-template-columns:1fr}
+  .side{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:12px 16px;gap:6px}
+  .side .grow,.promo{display:none}.logo{padding:4px 10px 4px 0}
+  .main{padding:16px 16px 60px}
+  .g5,.g4{grid-template-columns:repeat(2,1fr)}
+}
+
+/* buttons — soft neumorphic pills */
+.btn{border:0;border-radius:99px;padding:9px 18px;background:var(--card);box-shadow:var(--raise-sm);cursor:pointer;font-weight:600;transition:.15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{box-shadow:var(--inset);transform:none}
+.btn.pri{background:var(--acc);color:#fff}
+.btn.dark{background:#8f9aa0;color:#fff}
+.btn.sm{padding:6px 13px;font-size:12px}
+.btn.ghost{box-shadow:none;background:transparent;color:var(--muted)}
+.btn:disabled{opacity:.45;box-shadow:none;cursor:not-allowed;transform:none}
+.btn svg{width:15px;height:15px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:0;border-radius:99px;padding:8px 14px;background:var(--surf);box-shadow:var(--raise-sm);cursor:pointer;font-weight:600;font-size:13px;color:var(--muted);transition:.12s}
+.chip:hover{color:var(--text)}
+.chip.on{box-shadow:var(--inset);color:var(--acc-ink);background:var(--acc-soft)}
+.chip .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-left:6px;vertical-align:middle}
+.seg{display:inline-flex;padding:4px;border-radius:99px;box-shadow:var(--inset);background:var(--surf);gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;border-radius:99px;padding:7px 12px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--card);color:var(--text);box-shadow:var(--raise-sm)}
+.seg button.on.g{background:var(--acc);color:#fff}.seg button.on.a{background:var(--amber);color:#fff}.seg button.on.r{background:var(--red);color:#fff}.seg button.on.b{background:var(--blue);color:#fff}
+input[type=text],input[type=number],input[type=date],input:not([type]),select,textarea{border:0;border-radius:14px;padding:10px 14px;background:var(--surf);box-shadow:var(--inset);outline:none;width:100%}
+input:focus,select:focus,textarea:focus{box-shadow:var(--inset),0 0 0 2px var(--acc2)}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#8a969b 50%),linear-gradient(135deg,#8a969b 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
+.filters select{flex:1 1 150px;width:auto;min-width:140px}
+label.lb{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:14px 0 7px}
+.toggle{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:13px}
+.toggle i{width:44px;height:26px;border-radius:99px;box-shadow:var(--inset);background:var(--surf);position:relative;transition:.2s}
+.toggle i:after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--card);box-shadow:var(--raise-sm);transition:.2s}
+.toggle input{display:none}
+.toggle input:checked+i{background:var(--acc)}
+.toggle input:checked+i:after{left:21px}
+
+/* badges */
+.bd{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.bd.g{background:var(--acc-soft);color:var(--acc-ink)}.bd.r{background:var(--red-soft);color:#b8432f}.bd.a{background:var(--amber-soft);color:#a86a10}.bd.b{background:var(--blue-soft);color:#2f5bb4}.bd.n{background:var(--gray-soft);color:var(--muted)}
+
+/* KPI */
+.kpi{display:flex;align-items:center;gap:14px}
+.kpi .kt{font-size:12px;color:var(--muted);font-weight:600}
+.kpi .kv{font-size:24px;font-weight:800;letter-spacing:-.02em}
+.kpi .ks{font-size:11.5px;color:var(--muted)}
+.ring-bg{fill:none;stroke:var(--gray-soft);stroke-width:7}
+.ring-fg{fill:none;stroke-width:7;stroke-linecap:round;transition:stroke-dasharray .6s}
+.ring-t{font-weight:800;font-size:15px;fill:var(--text)}
+.ring-s{font-size:9px;fill:var(--muted)}
+
+/* charts */
+.chart{width:100%;height:auto;display:block}
+.chart .gl{stroke:var(--line);stroke-width:1}
+.chart .ax{font-size:10px;fill:var(--faint)}
+.bars{display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:18px}
+.bcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;height:100%}
+.btrack{flex:1;width:100%;max-width:38px;border-radius:10px;background:var(--gray-soft);position:relative;display:flex;flex-direction:column-reverse;overflow:hidden}
+.bfill{width:100%;transition:height .5s}
+.bval{font-size:11px;font-weight:700}
+.blab{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:middle}
+.hbar{height:12px;border-radius:99px;background:var(--gray-soft);overflow:hidden;display:flex}
+.hbar span{display:block;height:100%}
+.meter{height:8px;border-radius:99px;box-shadow:var(--inset);background:var(--surf);overflow:hidden;min-width:60px}
+.meter span{display:block;height:100%;border-radius:99px;background:var(--acc)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;font-size:11px;text-align:center}
+.cal .h{color:var(--faint);font-weight:600;padding-bottom:2px}
+.cal .d{aspect-ratio:1;border-radius:9px;display:grid;place-items:center;font-weight:600;color:var(--muted);background:var(--surf)}
+.cal .d.l1{background:#cdeee4;color:var(--acc-ink)}.cal .d.l2{background:#93d9c4;color:#11584a}.cal .d.l3{background:var(--acc);color:#fff}
+.cal .d.t{outline:2px solid var(--acc);outline-offset:1px}
+.formula{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--surf);box-shadow:var(--inset);border-radius:12px;padding:10px 12px;line-height:1.7}
+.formula b{color:var(--acc-ink)}.formula .bad{color:var(--red);font-weight:700}
+
+/* flow: 발견 → 조치 → 결과 */
+.flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+.flow .st{flex:1;min-width:110px;background:var(--surf);border-radius:12px;padding:8px 11px;font-size:12.5px;position:relative}
+.flow .st .k{font-size:10.5px;font-weight:700;color:var(--muted);display:block;margin-bottom:2px}
+.flow .ar{display:grid;place-items:center;width:22px;color:var(--faint);font-weight:700}
+.flowbig{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.flowbig .nd{flex:1;min-width:90px;text-align:center;padding:14px 8px;border-radius:16px;background:var(--card);box-shadow:var(--raise-sm)}
+.flowbig .nd .v{font-size:22px;font-weight:800}.flowbig .nd .t{font-size:11.5px;color:var(--muted)}
+.flowbig .arw{color:var(--acc);font-weight:800}
+
+/* list items */
+.ci{display:flex;gap:14px;align-items:center;padding:13px 14px;border-radius:16px;background:var(--surf);margin-bottom:10px}
+.ci .rk{width:46px;flex:none;text-align:center}
+.ci .main2{flex:1;min-width:0}
+.ci .nm{font-weight:700;font-size:15px}
+.ci .why{font-size:13px;color:var(--text);margin-top:2px}
+.ci .more{font-size:11.5px;color:var(--muted);margin-top:3px}
+.ci .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:640px){.ci{flex-wrap:wrap}.ci .acts{width:100%;justify-content:flex-start}}
+.tblw{overflow-x:auto;margin:0 -4px}
+table.t{width:100%;border-collapse:separate;border-spacing:0 6px;font-size:13px}
+table.t th{font-size:11.5px;color:var(--muted);font-weight:600;text-align:left;padding:4px 10px;white-space:nowrap}
+table.t td{background:var(--surf);padding:9px 10px;vertical-align:middle}
+table.t td:first-child{border-radius:12px 0 0 12px}table.t td:last-child{border-radius:0 12px 12px 0}
+table.t tr.click td{cursor:pointer}table.t tr.click:hover td{background:var(--acc-soft)}
+.empty{color:var(--muted);text-align:center;padding:24px;font-size:13px}
+.hwb{width:34px;height:34px;border-radius:11px;border:0;cursor:pointer;font-weight:800;background:var(--card);box-shadow:var(--raise-sm);color:var(--faint)}
+.hwb.O{color:var(--acc-ink);background:var(--acc-soft);box-shadow:var(--inset)}.hwb.△{color:#a86a10;background:var(--amber-soft);box-shadow:var(--inset)}.hwb.X{color:#b8432f;background:var(--red-soft);box-shadow:var(--inset)}
+.scin{width:74px!important;text-align:center;font-weight:700}
+
+/* remedial cards */
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:20px}
+.rc .rrow{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.rc .lab{width:54px;font-size:12px;font-weight:700;color:var(--muted);flex:none}
+.task{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;background:var(--surf);margin-top:6px;font-size:13px;font-weight:600}
+
+/* timeline */
+.tl{position:relative;padding-left:22px}
+.tl:before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tld{font-size:12px;font-weight:700;color:var(--muted);margin:16px 0 8px;position:relative}
+.tld:before{content:"";position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--card);box-shadow:0 0 0 3px var(--acc-soft),0 0 0 4px var(--acc)}
+.ev{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border-radius:12px;background:var(--surf);margin-bottom:6px;font-size:13px}
+.ev .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none;font-size:12px;font-weight:800}
+
+/* modal & toast */
+.mbg{position:fixed;inset:0;background:rgba(40,50,55,.28);backdrop-filter:blur(3px);display:grid;place-items:center;z-index:50;padding:16px}
+.modal{background:var(--card);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,.18);width:min(620px,100%);max-height:90vh;overflow:auto;padding:24px}
+.mfoot{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--card);box-shadow:var(--raise);border-radius:16px;padding:13px 20px;font-weight:600;z-index:60;display:flex;align-items:center;gap:10px;animation:up .25s}
+.toast .ck{width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-size:12px}
+.toast.err .ck{background:var(--red)}
+@keyframes up{from{opacity:0;transform:translate(-50%,10px)}}
+.stepper{display:flex;gap:6px;align-items:center;font-size:11.5px;color:var(--muted);font-weight:600}
+.stepper i{width:22px;height:6px;border-radius:99px;background:var(--gray-soft)}.stepper i.on{background:var(--acc)}
+
+/* login */
+.login{max-width:1000px;margin:0 auto;padding:48px 20px}
+.lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;margin-top:26px}
+.lcard{border:0;text-align:left;cursor:pointer;background:var(--card);box-shadow:var(--raise);border-radius:22px;padding:20px;transition:.15s}
+.lcard:hover{transform:translateY(-3px)}
+.lcard:active{box-shadow:var(--inset)}
+.guide{margin-top:30px}
+.guide ol{margin:8px 0 0;padding-left:20px;line-height:1.9}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"></div>
+<div id="toast"></div>
+<script>
+/* ============ utils ============ */
+const TODAY='2026-10-01';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const D=s=>new Date(s+'T00:00:00');
+const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const addDays=(s,n)=>{const d=D(s);d.setDate(d.getDate()+n);return fmt(d)};
+const diff=(a,b)=>Math.round((D(a)-D(b))/864e5);
+const md=s=>s?`${+s.slice(5,7)}/${+s.slice(8,10)}`:'';
+const byDate=(a,b)=>a.date<b.date?-1:a.date>b.date?1:0;
+const avg=a=>a.length?a.reduce((x,y)=>x+(y.score??y),0)/a.length:null;
+const pct=v=>v==null?'–':Math.round(v*100)+'%';
+const nowHM=()=>{const d=new Date();return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
+const WD='일월화수목금토';
+let seed=1;const rnd=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646};
+const pick=a=>a[Math.floor(rnd()*a.length)];const ri=(a,b)=>a+Math.floor(rnd()*(b-a+1));
+let uid=0;const nid=p=>p+(++uid);
+let gid=0;
+
+/* ============ code tables ============ */
+const ROLE={director:'원장',teacher:'담임 교사',native_teacher:'원어민 교사',assistant:'조교'};
+const AREAS={word:'단어',listening:'듣기',reading:'독해',grammar:'문법',essay:'에세이',speaking:'스피킹',attitude:'숙제·태도'};
+const NATIVE_AREAS=['essay','speaking','attitude'];
+const TYPES={repeat:'반복 오답',drop:'점수 하락',missing:'미제출 반복',concept:'개념 이해 부족',behavior:'수업 태도',positive:'긍정 변화'};
+const ACTIONS={retest:'재시험',extra:'추가 숙제',oneone:'1:1 재설명',recheck:'수업 중 재확인',seat:'자리 조정',parent:'학부모 연락',praise:'칭찬',etc:'기타'};
+const RESULTS={improved:'개선',same:'유지',worse:'악화'};
+const HW={listening:'듣기',reading:'독해',grammar:'문법',essay:'에세이',speaking:'스피킹 영상'};
+const OUTCOME={done:'완료',partial:'부분',incomplete:'미완'};
+const PASS={'10':'10분 이내','30':'30분 이내','60':'1시간'};
+const ATT={focus:'집중',normal:'보통',distract:'산만'};
+const STAGE=['시작 전','진행 중','절반','거의 완료'];
+const DAYN={MWF:'월수금',TT:'화목'};
+const COL={g:'var(--acc)',g2:'var(--acc2)',r:'var(--red)',a:'var(--amber)',b:'var(--blue)',n:'#c5cdd1'};
+const RANK={1:['확인','b'],2:['경고','r'],3:['칭찬','g'],4:['공백','n']};
+
+/* ============ icons ============ */
+const IC={
+ dash:'<path d="M4 13h6V4H4zM14 20h6V11h-6zM4 20h6v-4H4zM14 7h6V4h-6z"/>',
+ home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+ edit:'<path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/>',
+ run:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+ user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/>',
+ file:'<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>',
+ star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.6 15H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9.6 4V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.3z"/>',
+ dl:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ check:'<path d="M5 12l5 5 9-10"/>',
+ swap:'<path d="M7 7h13l-4-4M17 17H4l4 4"/>',
+ spark:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/>',
+};
+const ic=(k,s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${IC[k]}</svg>`;
+
+/* ============ demo data ============ */
+let DB;
+function isClassDay(c,date){const w=D(date).getDay();if(c.days=='MWF')return[1,3,5].includes(w);if(c.days=='TT')return[2,4].includes(w);return w==+c.days.slice(1)}
+const dayLabel=c=>DAYN[c.days]||(WD[+c.days.slice(1)]+'요일');
+
+function buildData(){
+  seed=20261001;uid=0;
+  const db={users:[
+    {id:'D1',name:'앤디',role:'director',active:true},
+    {id:'T1',name:'김지현',role:'teacher',active:true},{id:'T2',name:'박서준',role:'teacher',active:true},
+    {id:'T3',name:'이수민',role:'teacher',active:true},{id:'T4',name:'정하늘',role:'teacher',active:true},
+    {id:'N1',name:'Emily Carter',role:'native_teacher',active:true},
+    {id:'A1',name:'최유진',role:'assistant',active:true},{id:'A2',name:'한도윤',role:'assistant',active:true}],
+    classes:[],students:[],sessions:[],att:[],scores:[],hw:[],care:[],tickets:[],logs:[],showcase:[],comments:{},suggestions:[],
+    extra:[
+      {id:'E1',level:'all',title:'다음 단어 범위 예습 (Day+1)',active:true},{id:'E2',level:'all',title:'듣기 받아쓰기 1트랙',active:true},
+      {id:'E3',level:'all',title:'독해 1지문',active:true},{id:'E4',level:'all',title:'원서 읽기 10쪽',active:true},
+      {id:'E5',level:'Starter',title:'파닉스 카드 20장',active:true},{id:'E6',level:'Advanced',title:'문법 심화 1세트',active:true},{id:'E7',level:'Master',title:'문법 심화 1세트',active:true}],
+    settings:{pass:24,dropPct:20,gapDays:14,fastPass:3,incompleteRisk:3,riskDropPct:15,worseRisk:2,riskGapDays:21,maxCare:5}};
+  const TG={T1:['초4','초5'],T2:['초5','초6'],T3:['초6','중1'],T4:['중1','중2']};
+  const LV={'초4':'Starter','초5':'Basic','초6':'Inter','중1':'Advanced','중2':'Master'};
+  const SLOTS=[['MWF','16:00'],['MWF','17:00'],['TT','16:00'],['TT','19:00']];
+  let L=0;
+  for(const t of ['T1','T2','T3','T4'])SLOTS.forEach(([days,start],i)=>{
+    const grade=TG[t][i%2];
+    db.classes.push({id:'C'+t[1]+(i+1),name:`${grade} ${LV[grade]} ${'ABCDEFGHIJKLMNOP'[L++]}`,type:'homeroom',days,start,teacher:t,level:LV[grade],grade,
+      planned:grade[0]=='초'?30:24,termStart:'2026-09-01',textbook:LV[grade]+' 세트'});
+  });
+  ['월','화','수','목'].forEach((d,i)=>db.classes.push({id:'NC'+(i+1),name:`Essay·Speaking ${d}`,type:'native',days:'W'+(i+1),start:'18:00',teacher:'N1',level:'-',grade:'원어민'}));
+
+  const SUR='김이박최정강조윤장임한오서신권황안송류홍'.split('');
+  const GIV=['서준','하은','민준','지우','도윤','서연','시우','하린','예준','지아','주원','수아','지호','윤서','건우','채원','우진','지민','선우','다은','현우','소율','유준','예린','연우','아린','은우','나윤','지훈','서아'];
+  const PAT=['drop','normal','fail2','normal','rise','normal','hwmiss','normal','absent','normal','remedial3','normal','fastpass','normal','gap','normal','worse','normal','slump','normal','normal','normal','normal','normal'];
+  let k=0;
+  db.classes.filter(c=>c.type=='homeroom').forEach(c=>{
+    for(let i=0;i<6;i++){
+      const pat=PAT[k%PAT.length];k++;
+      let ab=22+rnd()*6.5;
+      if(pat=='fail2')ab=26;if(pat=='rise')ab=21;if(pat=='slump')ab=27.5;if(pat=='remedial3'||pat=='fastpass')ab=21.5;
+      db.students.push({id:'S'+k,name:pick(SUR)+pick(GIV),grade:c.grade,school:pick(c.grade[0]=='초'?['한빛초','새솔초','푸른초']:['대림중','하늘중']),
+        cls:c.id,homeroom:c.teacher,nclass:'NC'+(1+k%4),status:'재원',phone:`010-${ri(2000,9999)}-${ri(1000,9999)}`,pattern:pat,ability:ab,level:c.level,subjects:['담임 영어','원어민']});
+    }
+  });
+
+  // sessions (8월 = 전 학기 비교용, 9/1 학기 시작)
+  db.classes.filter(c=>c.type=='homeroom').forEach(c=>{
+    let no=0,idx=0;
+    for(let d='2026-08-03';d<=TODAY;d=addDays(d,1)){
+      if(!isClassDay(c,d))continue;
+      const inTerm=d>=c.termStart;
+      const s={id:nid('SS'),cls:c.id,date:d,no:null,regular:true,note:'',items:['listening','reading','grammar'].concat(idx%3==0?['essay']:[]),pending:false,inTerm};
+      idx++;
+      if(inTerm){
+        if(c.id=='C43'&&idx%2==0){s.regular=false;s.note='레벨테스트·학교 행사'}
+        else{s.no=++no;s.note=`${c.textbook} Unit ${Math.ceil(no/2)}`}
+      }
+      if(d==TODAY&&c.start>='19:00')s.pending=true;
+      db.sessions.push(s);
+    }
+  });
+
+  // attendance / scores / homework
+  db.students.forEach(st=>{
+    const ss=db.sessions.filter(s=>s.cls==st.cls&&!s.pending);const n=ss.length;const sc=[];
+    ss.forEach((s,i)=>{
+      const fe=n-1-i;
+      let absent=rnd()<0.03&&fe>2;if(st.pattern=='absent'&&fe==0)absent=true;
+      db.att.push({sid:st.id,sess:s.id,date:s.date,status:absent?'absent':(rnd()<0.04?'late':'present')});
+      if(absent)return;
+      let ab=st.ability;if(st.pattern=='slump'&&s.date>addDays(TODAY,-28))ab-=7;
+      let v=Math.round(ab+(rnd()+rnd()-1)*4);
+      if(st.pattern=='drop'&&fe==0){const p=sc.slice(-3);v=Math.round(p.reduce((a,b)=>a+b,0)/p.length*0.66)}
+      if(st.pattern=='fail2'&&fe<=1)v=ri(19,22);
+      if(st.pattern=='rise'&&fe<=2)v=[26,28,30][2-fe];
+      v=Math.max(0,Math.min(30,v));sc.push(v);
+      db.scores.push({id:nid('SC'),sid:st.id,sess:s.id,date:s.date,type:'word',score:v,max:30,passed:v>=24});
+      s.items.forEach(it=>{
+        const p=ab>=26?0.9:0.8,r=rnd();
+        let stt=r<p?'O':r<p+0.11?'△':'X';
+        if(st.pattern=='hwmiss'&&fe<=1&&it=='reading')stt='X';
+        db.hw.push({sid:st.id,sess:s.id,date:s.date,item:it,status:stt});
+      });
+    });
+  });
+
+  // care records
+  const FIND={repeat:['과거완료 시제 문제 반복 오답','관계대명사 which/that 구분 반복 오답','단어 철자 -tion/-sion 반복 실수'],
+    drop:['단어 점수 지난주 대비 6점 하락','챕터 테스트 점수 하락, 앞부분 범위 약함'],
+    missing:['독해 숙제 2회 연속 미제출','듣기 숙제 녹음 파일 미제출 반복'],
+    concept:['to부정사 vs 동명사 구분 개념 부족','5형식 목적보어 이해 부족'],
+    behavior:['수업 중 잡담 잦음, 집중 시간 짧음','필기 안 하고 엎드려 있음'],
+    positive:['발표 처음으로 자원함','오답노트 스스로 작성해 옴']};
+  const NFIND={essay:['서론 topic sentence 없이 시작','문단 연결어 사용이 늘어남'],speaking:['/r/ /l/ 발음 구분 개선 중','말끝 흐림, 자신감 부족'],attitude:['스피킹 영상 마감 2회 지연']};
+  const AREA_BY={drop:'word',repeat:'grammar',missing:'reading',concept:'grammar',behavior:'attitude',positive:'word'};
+  const ACT_BY={drop:'retest',repeat:'oneone',missing:'extra',concept:'oneone',behavior:'seat',positive:'praise'};
+  const NOTE={improved:['재시험 27/30 통과','다음 수업 같은 유형 정답','숙제 제출 재개'],same:['같은 유형 여전히 헷갈림'],worse:['추가 숙제도 미제출','점수 추가 하락']};
+  const mk=(st,teacher,created,type,area,result,finding)=>{
+    const follow=addDays(created,ri(2,4));
+    let res=result;
+    if(res===undefined)res=follow<TODAY&&rnd()<0.88?(rnd()<0.62?'improved':rnd()<0.8?'same':'worse'):null;
+    db.care.push({id:nid('CR'),sid:st.id,teacher,area,type,finding:finding||pick(FIND[type]),action:ACT_BY[type],action_note:'',follow,result:res,
+      result_note:res?pick(NOTE[res]):'',cand:rnd()<0.8,created});
+  };
+  db.students.forEach((st,i)=>{
+    if(st.pattern=='gap'){mk(st,st.homeroom,'2026-09-04','positive','word','improved');return}
+    const cnt=ri(1,3);
+    for(let j=0;j<cnt;j++){const t=pick(Object.keys(TYPES));mk(st,st.homeroom,addDays('2026-09-01',ri(3,29)),t,AREA_BY[t])}
+    if(st.pattern=='worse'){mk(st,st.homeroom,'2026-09-15','missing','reading','worse');mk(st,st.homeroom,'2026-09-22','behavior','attitude','worse')}
+    if(i%3==0){const a=pick(['essay','speaking']);mk(st,'N1',addDays('2026-09-01',ri(5,28)),a=='essay'?'repeat':'positive',a,undefined,pick(NFIND[a]))}
+  });
+
+  // remedial tickets & logs
+  const addLog=(t,date,out,st,fast)=>{
+    t.status=out;const c=db.classes.find(x=>x.id==st.cls);const h=+c.start.slice(0,2)+1;
+    const pass=out!='done'?'60':fast?'10':rnd()<0.2?'10':rnd()<0.62?'30':'60';
+    db.logs.push({id:nid('LG'),ticket:t.id,sid:st.id,task:t.task,date,assistant:pick(['A1','A2']),checkIn:`${h}:0${ri(0,9)}`,
+      c20:pass=='10'?null:ri(1,3),c40:pass=='60'?ri(1,3):null,outcome:out,pass,att:out=='done'?pick(['focus','focus','normal']):pick(['normal','distract','distract']),
+      extra:pass!='60'&&rnd()<0.5?pick(['E1','E2','E3','E4']):null,extraDone:rnd()<0.7,memo:''});
+  };
+  db.students.forEach(st=>{
+    const ss=db.sessions.filter(s=>s.cls==st.cls&&!s.pending);let forced=0;
+    ss.forEach((s,i)=>{
+      const tasks=[];const sc=db.scores.find(x=>x.sess==s.id&&x.sid==st.id);
+      if(sc&&!sc.passed)tasks.push(['단어 기준 미달',`단어 재시험 (${sc.score}/30)`]);
+      db.hw.filter(h=>h.sess==s.id&&h.sid==st.id&&h.status=='X').forEach(h=>tasks.push(['숙제 미완',`${HW[h.item]} 숙제 완료`]));
+      tasks.forEach(([reason,task])=>{
+        const t={id:nid('TK'),sid:st.id,issuedBy:st.homeroom,reason,task,src:s.date,from:null,status:'open',avail:s.date};
+        db.tickets.push(t);
+        if(s.date==TODAY)return;
+        let out=rnd()<0.85?'done':rnd()<0.5?'partial':'incomplete';
+        if(st.pattern=='remedial3'){out='done';if(s.date>='2026-09-01'&&forced<3){out='incomplete';forced++}}
+        if(st.pattern=='fastpass')out='done';
+        addLog(t,s.date,out,st,st.pattern=='fastpass'&&s.date>='2026-09-01');
+        if(out!='done'){
+          const nx=ss[i+1];
+          const ct={id:nid('TK'),sid:st.id,issuedBy:st.homeroom,reason:t.reason,task:t.task,src:t.src,from:t.id,status:'open',avail:nx?nx.date:addDays(s.date,1)};
+          db.tickets.push(ct);
+          if(nx&&nx.date<TODAY)addLog(ct,nx.date,'done',st,false);
+        }
+      });
+    });
+  });
+
+  // showcase
+  const SHC=['주제문이 분명해짐','문장 길이와 연결어가 다양해짐','발음이 또렷해지고 속도가 안정됨','결론 문단 구성이 좋아짐','자기 경험을 구체적으로 표현함'];
+  db.students.forEach(st=>['2026-08','2026-09'].forEach(m=>db.showcase.push({id:nid('SH'),sid:st.id,month:m,kind:pick(['essay','speaking']),url:`https://drive.google.com/demo/${st.id}-${m}`,comment:pick(SHC)})));
+  return db;
+}
+
+/* ============ selectors ============ */
+const ST=id=>DB.students.find(s=>s.id==id);
+const CL=id=>DB.classes.find(c=>c.id==id);
+const US=id=>DB.users.find(u=>u.id==id);
+const scoresOf=sid=>DB.scores.filter(s=>s.sid==sid).sort(byDate);
+const logsOf=sid=>DB.logs.filter(l=>l.sid==sid).sort(byDate);
+const sessionsOf=cid=>DB.sessions.filter(s=>s.cls==cid&&!s.pending);
+const termInc=sid=>DB.logs.filter(l=>l.sid==sid&&l.outcome=='incomplete'&&l.date>='2026-09-01').length;
+const lastCare=(sid,tid)=>DB.care.filter(r=>r.sid==sid&&(!tid||r.teacher==tid)).map(r=>r.created).sort().at(-1);
+function studentsOf(cid){const c=CL(cid);return DB.students.filter(s=>c.type=='native'?s.nclass==cid:s.cls==cid)}
+function myStudents(){
+  if(ME.role=='teacher')return DB.students.filter(s=>s.homeroom==ME.id);
+  if(ME.role=='native_teacher')return DB.students.filter(s=>CL(s.nclass).teacher==ME.id);
+  return DB.students;
+}
+function myClasses(){
+  if(ME.role=='teacher'||ME.role=='native_teacher')return DB.classes.filter(c=>c.teacher==ME.id);
+  if(ME.role=='assistant')return DB.classes.filter(c=>c.type=='homeroom');
+  return DB.classes;
+}
+function nextClassDate(st){const c=CL(ME.role=='native_teacher'?st.nclass:st.cls);let d=addDays(TODAY,1);for(let i=0;i<10;i++,d=addDays(d,1))if(isClassDay(c,d))return d;return addDays(TODAY,2)}
+function progressOf(c){
+  let total=0,el=0;for(let d=c.termStart;d<='2026-11-30';d=addDays(d,1))if(isClassDay(c,d)){total++;if(d<=TODAY)el++}
+  const done=DB.sessions.filter(s=>s.cls==c.id&&s.inTerm&&s.regular).length;
+  const pr=done/c.planned,er=el/total;return{done,planned:c.planned,el,total,pr,er,delayed:er-pr>=0.10};
+}
+
+/* ============ rules: 오늘 챙길 학생 (5-1) ============ */
+let dismissed=new Set();
+function careItems(cid){
+  const c=CL(cid),S=DB.settings,native=c.type=='native',out=[];
+  for(const st of studentsOf(cid)){
+    const its=[];
+    const add=(rank,code,since,text,act,ex={})=>{const key=st.id+'|'+code;if(!dismissed.has(key))its.push({rank,code,since,text,act,key,sid:st.id,...ex})};
+    const recs=DB.care.filter(r=>r.sid==st.id&&(native?r.teacher==c.teacher:US(r.teacher).role=='teacher'));
+    recs.filter(r=>!r.result&&r.follow<=TODAY).forEach(r=>add(1,'res'+r.id,r.follow,`${AREAS[r.area]} 결과 확인 — "${r.finding}" (${ACTIONS[r.action]})`,'result',{rid:r.id}));
+    if(!native){
+      const sc=scoresOf(st.id),last=sc.at(-1);
+      if(sc.length>=4){const p=sc.slice(-4,-1),a=avg(p);if(last.score<=a*(1-S.dropPct/100))add(2,'drop',last.date,`단어 ${last.score}/30 · 최근 3회 평균 ${a.toFixed(1)} 대비 ${Math.round((1-last.score/a)*100)}% 하락`,'care',{preset:{area:'word',type:'drop'}})}
+      if(sc.length>=2&&sc.slice(-2).every(x=>x.score<S.pass))add(2,'fail2',sc.at(-2).date,`단어 통과 기준(${S.pass}개) 미만 2회 연속 · ${sc.slice(-2).map(x=>x.score).join(' → ')}`,'care',{preset:{area:'word',type:'repeat'}});
+      for(const it of Object.keys(HW)){const hs=DB.hw.filter(h=>h.sid==st.id&&h.item==it).sort(byDate).slice(-2);
+        if(hs.length==2&&hs.every(h=>h.status=='X'))add(2,'hw'+it,hs[0].date,`${HW[it]} 숙제 2회 연속 미제출`,'care',{preset:{area:it=='essay'?'essay':it,type:'missing'}})}
+      const at=DB.att.filter(a=>a.sid==st.id).sort(byDate).at(-1);
+      if(at&&at.status=='absent')add(2,'abs',at.date,`${md(at.date)} 결석 후 첫 수업 · 보충 여부 확인`,'care',{preset:{area:'attitude',type:'behavior'}});
+      const lg=logsOf(st.id),ll=lg.at(-1);
+      if(ll&&ll.outcome=='incomplete')add(2,'rinc',ll.date,`나머지 미완료 귀가 (${md(ll.date)}) · 이월 과제 확인`,'care',{preset:{area:'attitude',type:'missing'}});
+      if(termInc(st.id)==2)add(2,'inc2',ll?ll.date:TODAY,'나머지 미완료 누적 2회 · 케어 기록 초안이 준비됨','care',{preset:{area:'attitude',type:'missing',finding:'나머지 학습 미완료 2회 누적 (자동 초안)'}});
+      const fast=lg.filter(l=>l.date>addDays(TODAY,-28)&&l.pass=='10'&&l.outcome=='done').length;
+      if(fast>=S.fastPass)add(2,'fast',addDays(TODAY,-28),`나머지 10분 내 통과 최근 4주 ${fast}회 · 집에서 준비하는 습관 확인`,'care',{preset:{area:'attitude',type:'missing'}});
+      if(sc.length>=3){const pm=Math.max(...sc.slice(0,-1).map(x=>x.score));
+        if(last.score>pm)add(3,'best',last.date,`개인 최고점 ${last.score}/30 달성`,'praise');
+        else if(sc.slice(-3).every((x,i,a)=>!i||x.score>a[i-1].score))add(3,'rise3',last.date,`단어 3회 연속 상승 · ${sc.slice(-3).map(x=>x.score).join(' → ')}`,'praise')}
+    }
+    const lc=recs.map(r=>r.created).sort().at(-1);
+    if(!lc||diff(TODAY,lc)>=S.gapDays)add(4,'gap',lc||'2000-01-01',lc?`최근 ${diff(TODAY,lc)}일간 케어 기록 없음 · 이번 주 관찰 1건`:'케어 기록 없음 · 이번 주 관찰 1건','care');
+    if(its.length){its.sort((a,b)=>a.rank-b.rank||(a.since<b.since?-1:1));out.push({st,top:its[0],rest:its.slice(1)})}
+  }
+  out.sort((a,b)=>a.top.rank-b.top.rank||(a.top.since<b.top.since?-1:1));
+  return out;
+}
+/* 원장 위험 학생 (5-4) */
+function riskOf(st){
+  const r=[],S=DB.settings;
+  const inc=termInc(st.id);if(inc>=S.incompleteRisk)r.push(['나머지 미완 '+inc+'회','r']);
+  const sc=scoresOf(st.id),a=avg(sc.filter(x=>x.date>addDays(TODAY,-28))),b=avg(sc.filter(x=>x.date<=addDays(TODAY,-28)&&x.date>addDays(TODAY,-56)));
+  if(a&&b&&a<=b*(1-S.riskDropPct/100))r.push([`단어 평균 ${Math.round((1-a/b)*100)}%↓`,'a']);
+  const w=DB.care.filter(x=>x.sid==st.id&&x.result=='worse').length;if(w>=S.worseRisk)r.push(['악화 '+w+'건','r']);
+  const lc=lastCare(st.id),g=lc?diff(TODAY,lc):99;if(g>=S.riskGapDays)r.push([`기록 공백 ${g}일`,'n']);
+  return r;
+}
+
+/* ============ chart helpers ============ */
+function ring(p,{size=78,color=COL.g,center,sub}={}){
+  const r=size/2-7,c=2*Math.PI*r,pp=Math.max(0,Math.min(1,p||0)),h=size/2;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex:none"><circle cx="${h}" cy="${h}" r="${r}" class="ring-bg"/><circle cx="${h}" cy="${h}" r="${r}" class="ring-fg" stroke="${color}" stroke-dasharray="${(c*pp).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${h} ${h})"/>
+  <text x="${h}" y="${sub?h-5:h}" text-anchor="middle" dominant-baseline="central" class="ring-t">${center??pct(p)}</text>${sub?`<text x="${h}" y="${h+11}" text-anchor="middle" class="ring-s">${sub}</text>`:''}</svg>`;
+}
+function donut(segs,{size=130,center='',sub=''}={}){
+  const r=size/2-12,C=2*Math.PI*r,h=size/2,tot=segs.reduce((a,s)=>a+s.v,0)||1;let off=0;
+  const arcs=segs.map(s=>{const len=C*s.v/tot;const el=`<circle cx="${h}" cy="${h}" r="${r}" fill="none" stroke="${s.c}" stroke-width="14" stroke-dasharray="${Math.max(0,len-2).toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 ${h} ${h})"/>`;off+=len;return el}).join('');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex:none"><circle cx="${h}" cy="${h}" r="${r}" fill="none" stroke="var(--gray-soft)" stroke-width="14"/>${arcs}
+  <text x="${h}" y="${h-6}" text-anchor="middle" dominant-baseline="central" style="font-weight:800;font-size:22px;fill:var(--text)">${center}</text><text x="${h}" y="${h+14}" text-anchor="middle" style="font-size:10px;fill:var(--muted)">${sub}</text></svg>`;
+}
+const legend=segs=>`<div class="legend">${segs.map(s=>`<span><i style="background:${s.c}"></i>${s.l} <b style="color:var(--text)">${s.v}</b></span>`).join('')}</div>`;
+function lineChart(pts,{min=0,max=30,ref=null,h=170,refLabel='',color=COL.g,showDots=true}={}){
+  if(!pts.length)return '<div class="empty">데이터 없음</div>';
+  const W=560,H=h,pl=30,pr=14,pt=14,pb=24,n=pts.length,id='lg'+(++gid);
+  const x=i=>pl+(n==1?(W-pl-pr)/2:i*(W-pl-pr)/(n-1)),y=v=>pt+(1-(v-min)/(max-min))*(H-pt-pb);
+  const path=pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
+  const ticks=[0,.25,.5,.75,1].map(t=>min+(max-min)*t);
+  const every=Math.ceil(n/8);
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".28"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+  ${ticks.map(t=>`<line class="gl" x1="${pl}" x2="${W-pr}" y1="${y(t)}" y2="${y(t)}"/><text class="ax" x="${pl-6}" y="${y(t)+3}" text-anchor="end">${Math.round(t)}</text>`).join('')}
+  ${ref!=null?`<line x1="${pl}" x2="${W-pr}" y1="${y(ref)}" y2="${y(ref)}" stroke="var(--red)" stroke-dasharray="4 4" stroke-width="1.3"/><text x="${W-pr}" y="${y(ref)-5}" text-anchor="end" style="font-size:10px;fill:var(--red);font-weight:700">${refLabel}</text>`:''}
+  <path d="${path}L${x(n-1)},${H-pb}L${x(0)},${H-pb}Z" fill="url(#${id})"/><path d="${path}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round"/>
+  ${showDots?pts.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.v)}" r="${i==n-1?5:3}" fill="${p.c||(i==n-1?color:'#fff')}" stroke="${p.c||color}" stroke-width="2"><title>${p.l}: ${p.v}</title></circle>`).join(''):''}
+  ${pts.map((p,i)=>i%every==0||i==n-1?`<text class="ax" x="${x(i)}" y="${H-6}" text-anchor="middle">${p.l}</text>`:'').join('')}</svg>`;
+}
+function spark(vals,{w=90,h=26,ref=null}={}){
+  if(vals.length<2)return '';const mn=Math.min(...vals,ref??99)-1,mx=Math.max(...vals)+1;
+  const x=i=>i*(w-4)/(vals.length-1)+2,y=v=>h-2-(v-mn)/(mx-mn)*(h-4);
+  return `<svg width="${w}" height="${h}">${ref!=null?`<line x1="0" x2="${w}" y1="${y(ref)}" y2="${y(ref)}" stroke="var(--red)" stroke-dasharray="2 3" stroke-width="1"/>`:''}<polyline fill="none" stroke="var(--acc)" stroke-width="1.8" points="${vals.map((v,i)=>x(i)+','+y(v)).join(' ')}"/><circle cx="${x(vals.length-1)}" cy="${y(vals.at(-1))}" r="2.8" fill="${vals.at(-1)<(ref??0)?'var(--red)':'var(--acc)'}"/></svg>`;
+}
+function bars(items,{max,fmtv=v=>v}={}){
+  const m=max||Math.max(1,...items.map(i=>i.stack?i.stack.reduce((a,s)=>a+s.v,0):i.v));
+  return `<div class="bars">${items.map(i=>{
+    const segs=i.stack||[{v:i.v,c:i.c||COL.g}];const tot=segs.reduce((a,s)=>a+s.v,0);
+    return `<div class="bcol" title="${esc(i.l)}"><span class="bval">${fmtv(tot)}</span><div class="btrack">${segs.map(s=>`<div class="bfill" style="height:${s.v/m*100}%;background:${s.c}"></div>`).join('')}</div><span class="blab">${esc(i.l)}</span></div>`}).join('')}</div>`;
+}
+const hbar=segs=>{const t=segs.reduce((a,s)=>a+s.v,0)||1;return `<div class="hbar">${segs.map(s=>`<span style="width:${s.v/t*100}%;background:${s.c}" title="${s.l||''} ${s.v}"></span>`).join('')}</div>`};
+const meter=(p,c=COL.g)=>`<div class="meter"><span style="width:${Math.round((p||0)*100)}%;background:${c}"></span></div>`;
+function heatCal(month,counts){
+  const first=D(month+'-01'),days=new Date(first.getFullYear(),first.getMonth()+1,0).getDate();
+  let h=WD.split('').map(w=>`<div class="h">${w}</div>`).join('')+'<div></div>'.repeat(first.getDay());
+  for(let d=1;d<=days;d++){const k=`${month}-${String(d).padStart(2,'0')}`,v=counts[k]||0,l=v==0?'':v<3?'l1':v<6?'l2':'l3';h+=`<div class="d ${l} ${k==TODAY?'t':''}" title="${md(k)} ${v}건">${d}</div>`}
+  return `<div class="cal">${h}</div>`;
+}
+const rankBadge=r=>`<span class="bd ${RANK[r][1]}">${RANK[r][0]}</span>`;
+const resBadge=r=>r.result?`<span class="bd ${r.result=='improved'?'g':r.result=='same'?'a':'r'}">${RESULTS[r.result]}</span>`:(r.follow<=TODAY?'<span class="bd b">결과 미입력</span>':`<span class="bd n">${md(r.follow)} 확인 예정</span>`);
+const outBadge=o=>`<span class="bd ${o=='done'?'g':o=='partial'?'a':'r'}">${OUTCOME[o]}</span>`;
+const avatar=(name,cls='')=>{const hue=[...name].reduce((a,c)=>a+c.charCodeAt(0),0)%360;return `<span class="av ${cls}" style="background:hsl(${hue} 38% 58%)">${esc(name.slice(-2))}</span>`};
+const careFlow=r=>`<div class="flow"><div class="st"><span class="k">발견 · ${AREAS[r.area]}/${TYPES[r.type]}</span>${esc(r.finding)}</div><div class="ar">→</div><div class="st"><span class="k">조치</span>${ACTIONS[r.action]}</div><div class="ar">→</div><div class="st"><span class="k">결과</span>${resBadge(r)} ${r.result_note?`<span class="small muted">${esc(r.result_note)}</span>`:''}</div></div>`;
+
+/* ============ app state / router ============ */
+let ME=null,R={page:'login',p:{}};
+const NAV={
+  director:[['dashboard','대시보드','dash'],['home','반 보기','home'],['entry','점수·숙제·출결','edit'],['remedial','나머지 학습','run'],['students','학생 타임라인','user'],['report','월말 리포트','file'],['admin','관리·설정','gear']],
+  teacher:[['home','내 반 홈','home'],['entry','점수·숙제·출결','edit'],['remedial','나머지 현황','run'],['students','내 학생','user'],['report','리포트 초안','file']],
+  native_teacher:[['home','내 반 홈','home'],['showcase','대표작','star'],['students','내 학생','user']],
+  assistant:[['remedial','오늘 나머지','run'],['entry','점수·숙제·출결','edit']]};
+const FIRST={director:'dashboard',teacher:'home',native_teacher:'home',assistant:'remedial'};
+const TITLE={dashboard:'원장 대시보드',home:'오늘 챙길 학생',entry:'점수 · 숙제 · 출결 입력',remedial:'강당 나머지 학습',students:'학생',timeline:'학생 타임라인',report:'월말 개별 리포트',admin:'관리 · 설정',showcase:'대표작 선택'};
+function nav(page,p={}){R={page,p};render();window.scrollTo(0,0)}
+function login(id){ME=US(id);dismissed=new Set();nav(FIRST[ME.role])}
+function logout(){ME=null;render()}
+function resetDemo(){DB=buildData();dismissed=new Set();RS={};DRAFT={};toast('데모 데이터 초기화됨')}
+
+function render(){
+  const app=$('#app');
+  if(!ME){app.innerHTML=loginView();return}
+  let body;
+  try{body=(PAGES[R.page]||(()=>''))(R.p)}catch(e){console.error(e);body=`<div class="card">오류: ${esc(e.message)}</div>`}
+  const d=D(TODAY);
+  app.innerHTML=`<div class="shell"><aside class="side">
+    <div class="logo"><span class="mk">${ic('spark',18)}</span>기록관리 <span class="demo">DEMO</span></div>
+    ${NAV[ME.role].map(([k,l,i])=>`<button class="navb ${R.page==k||(R.page=='timeline'&&k=='students')?'on':''}" onclick="nav('${k}')">${ic(i)}${l}</button>`).join('')}
+    <div class="grow"></div>
+    <div class="promo"><b>체험용 데모</b>데이터는 임의 생성입니다. 새로고침하면 처음 상태로 돌아갑니다.<div style="margin-top:10px"><button class="btn sm" onclick="resetDemo();render()">데이터 초기화</button></div></div>
+  </aside><main class="main">
+    <div class="topbar"><div class="ttl"><h2>${TITLE[R.page]||''}</h2><div class="crumb">${ROLE[ME.role]} · ${TITLE[R.page]||''}</div></div>
+      <span class="datechip">${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()} (${WD[d.getDay()]})</span>
+      <div class="me">${avatar(ME.name)}<div><div class="nm">${esc(ME.name)}</div><div class="rl">${ROLE[ME.role]}</div></div><button class="btn sm" onclick="logout()" title="역할 바꾸기">${ic('swap',14)}역할</button></div></div>
+    ${body}</main></div>`;
+}
+
+/* ============ login ============ */
+function loginView(){
+  const desc={director:'대시보드 · 위험 학생 · 리포트',teacher:'오늘 챙길 학생 · 케어 기록',native_teacher:'에세이·스피킹 케어 · 대표작',assistant:'강당 나머지 명단 · 점수 입력'};
+  return `<div class="login"><div class="logo" style="padding:0"><span class="mk">${ic('spark',18)}</span>학원 통합 기록관리 <span class="demo">DEMO</span></div>
+  <h1 style="font-size:30px;margin-top:18px">누구로 들어가 볼까요?</h1>
+  <p class="muted">로그인 대신 역할을 고르면 그 역할의 첫 화면으로 이동합니다. 오늘은 <b>2026년 10월 1일(목)</b>로 고정되어 있습니다.</p>
+  <div class="lgrid">${DB.users.filter(u=>u.id!='A2').map(u=>`<button class="lcard" onclick="login('${u.id}')"><div class="row">${avatar(u.name)}<div><div class="b">${esc(u.name)}</div><div class="small muted">${ROLE[u.role]}</div></div></div><div class="small muted" style="margin-top:14px">${desc[u.role]}</div></button>`).join('')}</div>
+  <div class="card guide"><h3>추천 체험 순서 (5분)</h3><ol>
+   <li><b>조교 최유진</b> → 점수·숙제·출결 → <b>화목 7:00 반</b>에 점수 입력·저장 (나머지 대상 자동 제안)</li>
+   <li><b>담임 김지현</b> → 내 반 홈 → 그 반 선택 → 나머지 제안 <b>확정 발행</b> · 오늘 챙길 학생 처리(케어 기록 / 결과 입력)</li>
+   <li><b>조교 최유진</b> → 오늘 나머지 → 학생 카드 버튼으로 입장·중간 체크·결과 입력 (미완은 자동 이월)</li>
+   <li><b>원장 앤디</b> → 대시보드 필터·그래프 → 위험 학생 클릭 → 타임라인·상담 요약 → 월말 리포트</li>
+   <li><b>원어민 Emily</b> → 대표작 선택 (전월과 나란히 비교)</li></ol></div></div>`;
+}
+
+/* ============ 원장 대시보드 ============ */
+let FILT={teacher:'',cls:'',grade:'',school:'',period:'14',type:''};
+function setF(k,v){FILT[k]=v;if(k=='teacher')FILT.cls='';render()}
+function filtStudents(){return DB.students.filter(s=>(!FILT.teacher||s.homeroom==FILT.teacher)&&(!FILT.cls||s.cls==FILT.cls)&&(!FILT.grade||s.grade==FILT.grade)&&(!FILT.school||s.school==FILT.school))}
+function recordRows(set,start){
+  const rows=[];
+  if(!FILT.type||FILT.type.startsWith('care'))DB.care.filter(r=>set.has(r.sid)&&r.created>=start&&(!FILT.type.includes(':')||r.type==FILT.type.split(':')[1])).forEach(r=>rows.push({date:r.created,sid:r.sid,kind:'케어',detail:`${AREAS[r.area]}·${TYPES[r.type]} — ${r.finding} → ${ACTIONS[r.action]}`,res:r.result?RESULTS[r.result]:r.follow<=TODAY?'미입력':'대기',by:US(r.teacher).name}));
+  if(!FILT.type||FILT.type=='remedial')DB.logs.filter(l=>set.has(l.sid)&&l.date>=start).forEach(l=>rows.push({date:l.date,sid:l.sid,kind:'나머지',detail:l.task,res:`${OUTCOME[l.outcome]} · ${PASS[l.pass]} · ${ATT[l.att]}`,by:US(l.assistant).name}));
+  return rows.sort((a,b)=>a.date<b.date?1:-1);
+}
+function dashboard(){
+  const studs=filtStudents(),set=new Set(studs.map(s=>s.id));
+  const start=FILT.period=='all'?'0000':addDays(TODAY,-(+FILT.period));
+  const teachers=DB.users.filter(u=>u.role=='teacher');
+  const hcls=DB.classes.filter(c=>c.type=='homeroom'&&(!FILT.teacher||c.teacher==FILT.teacher));
+  const sel=(k,opts,ph)=>`<select onchange="setF('${k}',this.value)"><option value="">${ph}</option>${opts.map(([v,l])=>`<option value="${v}" ${FILT[k]==v?'selected':''}>${l}</option>`).join('')}</select>`;
+  // KPI
+  const openT=DB.tickets.filter(t=>t.status=='open'&&t.avail<=TODAY&&set.has(t.sid));
+  const tLogs=DB.logs.filter(l=>l.date==TODAY&&set.has(l.sid));
+  const todaySet=new Set([...openT.map(t=>t.sid),...tLogs.map(l=>l.sid)]);
+  const doneN=new Set(tLogs.filter(l=>l.outcome=='done').map(l=>l.sid)).size;
+  const doneSet=new Set(tLogs.map(l=>l.sid)).size;
+  const wk=DB.care.filter(r=>set.has(r.sid)&&r.created>addDays(TODAY,-7));
+  const pending=DB.care.filter(r=>set.has(r.sid)&&!r.result&&r.follow<=TODAY);
+  const gap=studs.filter(s=>{const l=lastCare(s.id);return !l||diff(TODAY,l)>=DB.settings.gapDays});
+  const delayed=hcls.filter(c=>(!FILT.cls||c.id==FILT.cls)&&progressOf(c).delayed);
+  const risk=studs.map(s=>({s,r:riskOf(s)})).filter(x=>x.r.length).sort((a,b)=>b.r.length-a.r.length);
+  // charts data
+  const weeks=[];for(let i=7;i>=0;i--)weeks.push(addDays(TODAY,-7*i-((D(TODAY).getDay()+6)%7)));
+  const sc=DB.scores.filter(s=>set.has(s.sid));
+  const wpts=weeks.map(w=>{const v=avg(sc.filter(s=>s.date>=w&&s.date<addDays(w,7)));return v==null?null:{l:md(w),v:+v.toFixed(1)}}).filter(Boolean);
+  const passRate=sc.filter(s=>s.date>=start);const pr=passRate.length?passRate.filter(s=>s.passed).length/passRate.length:0;
+  const careP=DB.care.filter(r=>set.has(r.sid)&&r.created>=start);
+  const resSeg=[{l:'개선',v:careP.filter(r=>r.result=='improved').length,c:COL.g},{l:'유지',v:careP.filter(r=>r.result=='same').length,c:COL.a},{l:'악화',v:careP.filter(r=>r.result=='worse').length,c:COL.r},{l:'미입력/대기',v:careP.filter(r=>!r.result).length,c:COL.n}];
+  const typeSeg=Object.entries(TYPES).map(([k,l],i)=>({l,v:careP.filter(r=>r.type==k).length,c:['#2ea58a','#5cc5ac','#e09a2f','#4b7bd8','#e0654f','#9fd8c7'][i]}));
+  const days14=[];for(let i=13;i>=0;i--)days14.push(addDays(TODAY,-i));
+  const remDays=days14.map(d=>{const L=DB.logs.filter(l=>l.date==d&&set.has(l.sid));return {l:md(d),stack:[{v:L.filter(l=>l.outcome=='done').length,c:COL.g},{v:L.filter(l=>l.outcome=='partial').length,c:COL.a},{v:L.filter(l=>l.outcome=='incomplete').length,c:COL.r}]}}).filter(x=>x.stack.some(s=>s.v));
+  const calCounts={};DB.care.filter(r=>set.has(r.sid)).forEach(r=>calCounts[r.created]=(calCounts[r.created]||0)+1);
+  const tStats=teachers.filter(t=>!FILT.teacher||t.id==FILT.teacher).map(t=>{const ss=studs.filter(s=>s.homeroom==t.id);const cr=DB.care.filter(r=>r.teacher==t.id&&r.created>=start&&set.has(r.sid));
+    return {t,n:ss.length,care:cr.length,pend:cr.filter(r=>!r.result&&r.follow<=TODAY).length,gap:ss.filter(s=>{const l=lastCare(s.id,t.id);return !l||diff(TODAY,l)>=DB.settings.gapDays}).length}});
+  const rows=recordRows(set,start);
+  const flowN={f:careP.length,a:careP.filter(r=>r.action).length,r:careP.filter(r=>r.result).length,i:careP.filter(r=>r.result=='improved').length};
+  window._rows=rows;
+  return `<div class="card" style="margin-bottom:20px"><div class="row filters">
+    ${sel('teacher',teachers.map(t=>[t.id,t.name+' 선생님']),'전체 교사')}
+    ${sel('cls',hcls.map(c=>[c.id,`${dayLabel(c)} ${c.start} ${c.name}`]),'전체 반')}
+    ${sel('grade',['초4','초5','초6','중1','중2'].map(g=>[g,g]),'전체 학년')}
+    ${sel('school',[...new Set(DB.students.map(s=>s.school))].map(s=>[s,s]),'전체 학교')}
+    ${sel('period',[['7','최근 7일'],['14','최근 14일'],['30','최근 30일']],'전체 기간').replace('<option value="">전체 기간</option>','<option value="all" '+(FILT.period=='all'?'selected':'')+'>전체 기간</option>')}
+    ${sel('type',[['care','케어 기록 전체'],...Object.entries(TYPES).map(([k,l])=>['care:'+k,'케어 · '+l]),['remedial','나머지 학습']],'전체 기록 유형')}
+  </div><div class="small muted" style="margin-top:10px">대상 학생 <b>${studs.length}</b>명 · 필터는 조합해서 쓸 수 있습니다</div></div>
+
+  <div class="grid g5" style="margin-bottom:20px">
+    <div class="card kpi">${ring(doneSet?doneN/doneSet:0,{center:todaySet.size+'명',sub:'오늘 나머지'})}<div><div class="kt">오늘 나머지</div><div class="kv">${pct(doneSet?doneN/doneSet:null)}</div><div class="ks">완료율 · 처리 ${doneSet}/${todaySet.size}</div></div></div>
+    <div class="card kpi">${ring(Math.min(1,wk.length/40),{center:wk.length,sub:'건',color:COL.b})}<div><div class="kt">이번 주 케어 기록</div><div class="kv">${wk.length}건</div><div class="ks">최근 7일</div></div></div>
+    <div class="card kpi">${ring(pending.length/Math.max(1,DB.care.filter(r=>set.has(r.sid)&&r.follow<=TODAY).length),{center:pending.length,sub:'건',color:COL.a})}<div><div class="kt">결과 미입력</div><div class="kv">${pending.length}건</div><div class="ks">확인 예정일 지남</div></div></div>
+    <div class="card kpi">${ring(gap.length/Math.max(1,studs.length),{center:pct(gap.length/Math.max(1,studs.length)),sub:'목표 ≤10%',color:gap.length/Math.max(1,studs.length)>.1?COL.r:COL.g})}<div><div class="kt">기록 공백 학생</div><div class="kv">${gap.length}명</div><div class="ks">${DB.settings.gapDays}일간 케어 0건</div></div></div>
+    <div class="card kpi">${ring(delayed.length/Math.max(1,hcls.length),{center:delayed.length,sub:'개 반',color:COL.r})}<div><div class="kt">진도 지연 반</div><div class="kv">${delayed.length}개</div><div class="ks">계획 대비 10%p↓</div></div></div>
+  </div>
+
+  <div class="grid g2" style="margin-bottom:20px">
+    <div class="card"><div class="chead"><h3>단어 점수 주간 평균</h3><span class="bd g">통과율 ${pct(pr)}</span></div>
+      ${lineChart(wpts,{min:18,max:30,ref:DB.settings.pass,refLabel:`통과 기준 ${DB.settings.pass}`})}</div>
+    <div class="card"><div class="chead"><h3>케어 기록 흐름</h3><span class="small muted">발견 → 조치 → 결과</span></div>
+      <div class="flowbig"><div class="nd"><div class="v">${flowN.f}</div><div class="t">발견</div></div><span class="arw">→</span><div class="nd"><div class="v">${flowN.a}</div><div class="t">조치</div></div><span class="arw">→</span><div class="nd"><div class="v">${flowN.r}</div><div class="t">결과 입력</div></div><span class="arw">→</span><div class="nd" style="background:var(--acc-soft)"><div class="v" style="color:var(--acc-ink)">${flowN.i}</div><div class="t">개선</div></div></div>
+      <div class="formula" style="margin-top:14px">결과 입력률 = 결과 입력 ÷ 확인일 지난 기록 = <b>${pct(DB.care.filter(r=>set.has(r.sid)&&r.follow<=TODAY&&r.result).length/Math.max(1,DB.care.filter(r=>set.has(r.sid)&&r.follow<=TODAY).length))}</b> <span class="muted">(목표 80%)</span></div>
+      <div class="row" style="margin-top:14px;gap:18px">${donut(resSeg,{size:120,center:careP.length,sub:'케어 기록'})}<div class="stack" style="gap:8px;flex:1">${legend(resSeg)}${hbar(typeSeg)}${legend(typeSeg)}</div></div></div>
+  </div>
+
+  <div class="grid g3" style="margin-bottom:20px">
+    <div class="card"><div class="chead"><h3>나머지 결과 (최근 14일)</h3></div>${remDays.length?bars(remDays):'<div class="empty">기록 없음</div>'}
+      <div class="legend" style="margin-top:10px"><span><i style="background:${COL.g}"></i>완료</span><span><i style="background:${COL.a}"></i>부분</span><span><i style="background:${COL.r}"></i>미완</span></div></div>
+    <div class="card"><div class="chead"><h3>교사별 케어 기록</h3><span class="small muted">기간 내</span></div>
+      ${bars(tStats.map(x=>({l:x.t.name,v:x.care,c:COL.g})))}
+      <div class="small muted" style="margin-top:10px">${tStats.map(x=>`${x.t.name}: 미입력 ${x.pend} · 공백 ${x.gap}명`).join(' / ')}</div></div>
+    <div class="card"><div class="chead"><h3>9월 기록 캘린더</h3><span class="small muted">케어 기록 건수</span></div>${heatCal('2026-09',calCounts)}
+      <div class="legend" style="margin-top:10px"><span><i style="background:var(--surf);box-shadow:var(--inset)"></i>0</span><span><i style="background:#cdeee4"></i>1–2</span><span><i style="background:#93d9c4"></i>3–5</span><span><i style="background:var(--acc)"></i>6+</span></div></div>
+  </div>
+
+  <div class="grid g2" style="margin-bottom:20px">
+    <div class="card"><div class="chead"><h3>위험 학생</h3><span class="bd r">${risk.length}명</span></div>
+      ${risk.length?`<div class="tblw"><table class="t"><tr><th>학생</th><th>반 · 담임</th><th>사유</th><th>단어 추이</th></tr>${risk.slice(0,12).map(({s,r})=>`<tr class="click" onclick="nav('timeline',{sid:'${s.id}'})"><td><div class="row" style="gap:8px;flex-wrap:nowrap">${avatar(s.name)}<div><b>${esc(s.name)}</b><div class="small muted">${s.grade} · ${s.school}</div></div></div></td><td class="small">${esc(CL(s.cls).name)}<br><span class="muted">${US(s.homeroom).name}</span></td><td>${r.map(([t,c])=>`<span class="bd ${c}">${t}</span>`).join(' ')}</td><td>${spark(scoresOf(s.id).slice(-10).map(x=>x.score),{ref:DB.settings.pass})}</td></tr>`).join('')}</table></div>`:'<div class="empty">위험 학생 없음</div>'}
+      <div class="small muted">기준: 나머지 미완 ${DB.settings.incompleteRisk}회 · 4주 평균 ${DB.settings.riskDropPct}%↓ · 악화 ${DB.settings.worseRisk}건 · 공백 ${DB.settings.riskGapDays}일 (관리·설정에서 변경)</div></div>
+    <div class="card"><div class="chead"><h3>진도 현황</h3><span class="small muted">5-5 규칙</span></div>
+      ${hcls.filter(c=>!FILT.cls||c.id==FILT.cls).map(c=>{const p=progressOf(c);return `<div style="margin-bottom:12px"><div class="row small" style="justify-content:space-between"><span><b>${esc(c.name)}</b> <span class="muted">${dayLabel(c)} ${c.start}</span></span>${p.delayed?'<span class="bd r">지연</span>':''}</div>
+        <div class="row" style="gap:8px;margin-top:4px;flex-wrap:nowrap"><span class="small muted" style="width:30px">진도</span><div class="sp">${meter(p.pr,p.delayed?COL.r:COL.g)}</div><span class="small" style="width:36px">${pct(p.pr)}</span></div>
+        <div class="row" style="gap:8px;flex-wrap:nowrap"><span class="small muted" style="width:30px">경과</span><div class="sp">${meter(p.er,'#b9c3c8')}</div><span class="small" style="width:36px">${pct(p.er)}</span></div></div>`}).join('')}
+      ${delayed.slice(0,1).map(c=>{const p=progressOf(c);return `<div class="formula">${esc(c.name)}: 진행 ${p.done} ÷ 계획 ${p.planned} = <b>${pct(p.pr)}</b><br>경과 ${p.el} ÷ 전체 ${p.total} = <b>${pct(p.er)}</b><br>차이 <span class="bad">${Math.round((p.er-p.pr)*100)}%p ≥ 10%p → 지연</span></div>`}).join('')}</div>
+  </div>
+
+  <div class="card"><div class="chead"><h3>기록 목록</h3><span class="small muted">${rows.length}건 · 최신 50건 표시</span><button class="btn sm" onclick="dlRows()">${ic('dl',14)}엑셀 다운로드</button></div>
+    <div class="tblw"><table class="t"><tr><th>날짜</th><th>학생</th><th>구분</th><th>내용</th><th>결과</th><th>작성</th></tr>
+    ${rows.slice(0,50).map(r=>{const s=ST(r.sid);return `<tr class="click" onclick="nav('timeline',{sid:'${s.id}'})"><td>${md(r.date)}</td><td><b>${esc(s.name)}</b> <span class="small muted">${s.grade}</span></td><td><span class="bd ${r.kind=='케어'?'g':'b'}">${r.kind}</span></td><td>${esc(r.detail)}</td><td class="small">${esc(r.res)}</td><td class="small muted">${esc(r.by)}</td></tr>`}).join('')}</table></div></div>`;
+}
+const csv=rows=>rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+function dl(name,text,type='text/csv;charset=utf-8'){const b=new Blob([type.startsWith('text/csv')?'﻿'+text:text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click()}
+function dlRows(){dl(`기록목록_${TODAY}.csv`,csv([['날짜','학생','학년','학교','반','담임','구분','내용','결과','작성'],...window._rows.map(r=>{const s=ST(r.sid);return[r.date,s.name,s.grade,s.school,CL(s.cls).name,US(s.homeroom).name,r.kind,r.detail,r.res,r.by]})]));toast('CSV(엑셀) 다운로드')}
+
+/* ============ 내 반 홈 / 오늘 챙길 학생 ============ */
+let HOMECLS=null;
+function homePage(){
+  const cls=myClasses();
+  if(!cls.find(c=>c.id==HOMECLS))HOMECLS=(cls.find(c=>isClassDay(c,TODAY))||cls[0]).id;
+  const c=CL(HOMECLS),native=c.type=='native';
+  const canW=ME.role=='teacher'||ME.role=='native_teacher';
+  const items=careItems(c.id),top=items.slice(0,DB.settings.maxCare);
+  const studs=studentsOf(c.id);
+  const sugg=DB.suggestions.filter(x=>x.cls==c.id&&x.status=='pending');
+  const tLogs=DB.logs.filter(l=>l.date==TODAY&&studs.some(s=>s.id==l.sid));
+  const openT=DB.tickets.filter(t=>t.status=='open'&&t.avail<=TODAY&&studs.some(s=>s.id==t.sid));
+  const p=native?null:progressOf(c);
+  const cnt={1:0,2:0,3:0,4:0};items.forEach(i=>cnt[i.top.rank]++);
+  const groups=ME.role=='director'?DB.users.filter(u=>u.role=='teacher'||u.role=='native_teacher'):[ME];
+  return `<div class="card" style="margin-bottom:20px">${groups.map(u=>`<div class="row" style="margin-bottom:8px">${ME.role=='director'?`<span class="small b muted" style="width:90px">${esc(u.name)}</span>`:''}<div class="chips">${cls.filter(x=>x.teacher==u.id).map(x=>`<button class="chip ${x.id==c.id?'on':''}" onclick="HOMECLS='${x.id}';render()">${dayLabel(x)} ${x.start} · ${esc(x.name)}${isClassDay(x,TODAY)?' <span class="bd g" style="padding:1px 6px">오늘</span>':''}${DB.suggestions.some(s=>s.cls==x.id&&s.status=='pending')?'<span class="dot"></span>':''}</button>`).join('')}</div></div>`).join('')}</div>
+
+  <div class="grid g2">
+   <div class="stack">
+    <div class="card"><div class="chead"><h3>오늘 챙길 학생</h3>${[1,2,3,4].map(r=>`<span class="bd ${RANK[r][1]}">${RANK[r][0]} ${cnt[r]}</span>`).join('')}</div>
+      ${top.length?top.map(({st,top:t,rest})=>`<div class="ci"><div class="rk">${rankBadge(t.rank)}</div>${avatar(st.name)}
+        <div class="main2"><div class="nm"><a onclick="nav('timeline',{sid:'${st.id}'})">${esc(st.name)}</a></div><div class="why">${esc(t.text)}</div>${rest.length?`<div class="more">+ ${rest.map(x=>esc(x.text.split(' · ')[0].split(' — ')[0])).join(' / ')}</div>`:''}</div>
+        <div class="acts">${canW?actBtn(t):''}${canW?`<button class="btn sm ghost" onclick="dismiss('${t.key}')">${ic('check',14)}확인함</button>`:''}</div></div>`).join(''):'<div class="empty">오늘 챙길 학생이 없습니다 👍</div>'}
+      ${items.length>top.length?`<div class="small muted">외 ${items.length-top.length}명은 다음 순위 (최대 ${DB.settings.maxCare}명 표시)</div>`:''}
+      <div class="small muted" style="margin-top:8px">순위: 확인(결과 입력 대기) → 경고(하락·미달·미제출·결석·나머지 미완) → 칭찬 → 공백(${DB.settings.gapDays}일 무기록)</div></div>
+
+    <div class="card"><div class="chead"><h3>반 학생 ${studs.length}명</h3>${canW?`<button class="btn sm pri" onclick="openCare(null)">${ic('plus',14)}케어 기록</button>`:''}</div>
+      <div class="tblw"><table class="t"><tr><th>학생</th>${native?'<th>9월 대표작</th><th>10월 대표작</th>':'<th>단어 추이</th><th>숙제 제출률 (4주)</th>'}<th>케어</th><th></th></tr>
+      ${studs.map(s=>{const sc=scoresOf(s.id);const hw=DB.hw.filter(h=>h.sid==s.id&&h.date>addDays(TODAY,-28));const hr=hw.length?hw.filter(h=>h.status=='O').length/hw.length:0;const nc=DB.care.filter(r=>r.sid==s.id).length;
+        const sh=m=>{const x=DB.showcase.find(z=>z.sid==s.id&&z.month==m);return x?`<span class="bd ${x.kind=='essay'?'b':'g'}">${x.kind=='essay'?'에세이':'스피킹'}</span>`:'<span class="bd n">미선택</span>'};
+        return `<tr><td><a onclick="nav('timeline',{sid:'${s.id}'})"><b>${esc(s.name)}</b></a> <span class="small muted">${s.school}</span></td>
+        ${native?`<td>${sh('2026-09')}</td><td>${sh('2026-10')}</td>`:`<td>${spark(sc.slice(-10).map(x=>x.score),{ref:DB.settings.pass})} <span class="small b">${sc.at(-1)?.score??'–'}</span></td><td><div class="row" style="flex-wrap:nowrap;gap:8px">${meter(hr,hr<.75?COL.a:COL.g)}<span class="small">${pct(hr)}</span></div></td>`}
+        <td class="small">${nc}건</td><td style="white-space:nowrap">${canW?`<button class="btn sm" onclick="openCare('${s.id}')">케어</button> ${native?'':`<button class="btn sm" onclick="openTicket('${s.id}')">티켓</button>`}`:''}</td></tr>`}).join('')}</table></div></div>
+   </div>
+
+   <div class="stack">
+    ${native?'':`<div class="card"><div class="chead"><h3>반 정보</h3><span class="small muted">${US(c.teacher).name} · ${c.level} · ${c.textbook}</span></div>
+      <div class="row" style="gap:18px;flex-wrap:nowrap">${ring(p.pr,{size:92,color:p.delayed?COL.r:COL.g,sub:'진도율'})}
+      <div class="formula" style="flex:1">진도 ${p.done}/${p.planned}회 = <b>${pct(p.pr)}</b><br>경과 ${p.el}/${p.total}일 = <b>${pct(p.er)}</b><br>${p.delayed?`<span class="bad">지연 ${Math.round((p.er-p.pr)*100)}%p</span>`:'정상 진행'}</div></div></div>`}
+    ${sugg.length?`<div class="card"><div class="chead"><h3>나머지 제안 · 확정 필요</h3><span class="bd a">${sugg.length}건</span></div>
+      <div class="small muted" style="margin-bottom:8px">조교 입력에서 자동 제안됨. 확정해야 티켓이 발행됩니다 (오탐 방지).</div>
+      ${sugg.map(s=>`<label class="task" style="cursor:pointer"><input type="checkbox" ${s.sel?'checked':''} onchange="sugSel('${s.id}',this.checked)"> <b>${esc(ST(s.sid).name)}</b> ${esc(s.task)} <span class="sp"></span><span class="bd ${s.def?'r':'a'}">${esc(s.reason)}</span></label>`).join('')}
+      ${ME.role=='teacher'?`<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn" onclick="confirmSug('${c.id}',false)">모두 보류</button><button class="btn pri" onclick="confirmSug('${c.id}',true)">선택 확정 발행</button></div>`:''}</div>`:''}
+    ${native?'':`<div class="card"><div class="chead"><h3>오늘 나머지</h3><span class="small muted">조교 입력 → 자동 요약</span></div>
+      <div class="row" style="gap:16px;margin-bottom:10px;flex-wrap:nowrap">${donut([{v:tLogs.filter(l=>l.outcome=='done').length,c:COL.g,l:'완료'},{v:tLogs.filter(l=>l.outcome=='partial').length,c:COL.a,l:'부분'},{v:tLogs.filter(l=>l.outcome=='incomplete').length,c:COL.r,l:'미완'},{v:new Set(openT.map(t=>t.sid)).size,c:COL.n,l:'대기'}],{size:104,center:new Set([...openT,...tLogs].map(x=>x.sid)).size,sub:'명'})}
+      <div class="stack" style="gap:6px;flex:1">${legend([{l:'완료',v:tLogs.filter(l=>l.outcome=='done').length,c:COL.g},{l:'부분',v:tLogs.filter(l=>l.outcome=='partial').length,c:COL.a},{l:'미완',v:tLogs.filter(l=>l.outcome=='incomplete').length,c:COL.r},{l:'대기',v:new Set(openT.map(t=>t.sid)).size,c:COL.n}])}</div></div>
+      ${tLogs.map(l=>`<div class="task">${outBadge(l.outcome)} <b>${esc(ST(l.sid).name)}</b> ${esc(l.task)} <span class="sp"></span><span class="small muted">${PASS[l.pass]} · ${ATT[l.att]}</span></div>`).join('')}
+      ${openT.length?`<div class="small muted" style="margin-top:8px">대기: ${[...new Set(openT.map(t=>ST(t.sid).name))].join(', ')}</div>`:''}</div>`}
+   </div>
+  </div>`;
+}
+function actBtn(t){
+  if(t.act=='result')return `<button class="btn sm pri" onclick="openResult('${t.rid}')">결과 입력</button>`;
+  const pre=JSON.stringify({...(t.preset||{}),...(t.act=='praise'?{type:'positive',action:'praise',area:'word'}:{}),dkey:t.key}).replace(/"/g,'&quot;');
+  return `<button class="btn sm pri" onclick='openCare("${t.sid}",${pre})'>${t.act=='praise'?'칭찬 기록':t.rank==4?'관찰 기록':'케어 기록'}</button>`;
+}
+function dismiss(k){dismissed.add(k);toast('오늘 목록에서 제외');render()}
+function sugSel(id,v){DB.suggestions.find(s=>s.id==id).sel=v}
+function confirmSug(cid,issue){
+  let n=0;DB.suggestions.filter(x=>x.cls==cid&&x.status=='pending').forEach(s=>{
+    if(issue&&s.sel){DB.tickets.push({id:nid('TK'),sid:s.sid,issuedBy:ME.id,reason:s.reason,task:s.task,src:s.date,from:null,status:'open',avail:TODAY});s.status='issued';n++}else s.status='dismissed'});
+  toast(issue?`나머지 티켓 ${n}건 발행 · 강당 명단에 추가됨`:'제안 보류');render();
+}
+
+/* ============ modals ============ */
+let M={},MF=null;
+function showModal(fn){MF=fn;rm()}
+function rm(){$('#modal').innerHTML=MF?`<div class="mbg" onclick="if(event.target==this)closeModal()"><div class="modal">${MF()}</div></div>`:''}
+function closeModal(){MF=null;rm()}
+function chips(list,cur,key){return `<div class="chips">${list.map(([v,l])=>`<button class="chip ${cur==v?'on':''}" onclick="M.${key}='${v}';rm()">${l}</button>`).join('')}</div>`}
+
+function openCare(sid,pre={}){
+  if(ME.role=='director'||ME.role=='assistant')return toast('케어 기록은 교사만 입력합니다',1);
+  M={kind:'care',sid,area:pre.area||null,type:pre.type||null,action:pre.action||null,finding:pre.finding||'',follow:sid?nextClassDate(ST(sid)):addDays(TODAY,2),cand:true,dkey:pre.dkey};
+  if(ME.role=='native_teacher'&&M.area&&!NATIVE_AREAS.includes(M.area))M.area=null;
+  showModal(careModal);
+}
+function careModal(){
+  const st=M.sid?ST(M.sid):null,areas=ME.role=='native_teacher'?NATIVE_AREAS:Object.keys(AREAS);
+  const done=[M.sid,M.area,M.type,M.finding.trim(),M.action].map(Boolean);
+  return `<div class="row"><h3 class="sp">케어 기록${st?' · '+esc(st.name):''}</h3><div class="stepper">${done.map(d=>`<i class="${d?'on':''}"></i>`).join('')} ${done.filter(Boolean).length}/5</div></div>
+  <div class="small muted" style="margin-top:4px">평소와 다르게 무언가를 해줬을 때만 기록합니다. 목표 30초.</div>
+  ${st?'':`<label class="lb">학생</label><select onchange="M.sid=this.value;if(this.value)M.follow=nextClassDate(ST(this.value));rm()"><option value="">선택</option>${myStudents().map(s=>`<option value="${s.id}" ${M.sid==s.id?'selected':''}>${esc(s.name)} · ${esc(CL(s.cls).name)}</option>`).join('')}</select>`}
+  <label class="lb">영역</label>${chips(areas.map(a=>[a,AREAS[a]]),M.area,'area')}
+  <label class="lb">유형</label>${chips(Object.entries(TYPES),M.type,'type')}
+  <label class="lb">발견 한 줄</label><input id="mf" value="${esc(M.finding)}" oninput="M.finding=this.value" placeholder="예: 관계대명사 which/that 구분 반복 오답">
+  <label class="lb">조치</label>${chips(Object.entries(ACTIONS),M.action,'action')}
+  <div class="row" style="margin-top:6px;align-items:flex-end"><div style="width:180px"><label class="lb">확인 예정일 (기본: 다음 수업)</label><input type="date" value="${M.follow}" onchange="M.follow=this.value"></div>
+   <label class="toggle" style="margin-bottom:8px"><input type="checkbox" ${M.cand?'checked':''} onchange="M.cand=this.checked"><i></i>리포트 후보</label></div>
+  <div class="mfoot"><button class="btn" onclick="closeModal()">취소</button><button class="btn pri" onclick="saveCare()">${ic('check',14)}저장</button></div>`;
+}
+function saveCare(){
+  const f=document.getElementById('mf');if(f)M.finding=f.value;
+  if(!M.sid||!M.area||!M.type||!M.finding.trim()||!M.action)return toast('학생·영역·유형·한 줄·조치를 모두 골라주세요',1);
+  DB.care.push({id:nid('CR'),sid:M.sid,teacher:ME.id,area:M.area,type:M.type,finding:M.finding.trim(),action:M.action,action_note:'',follow:M.follow,result:null,result_note:'',cand:M.cand,created:TODAY});
+  if(M.dkey)dismissed.add(M.dkey);
+  closeModal();toast(`케어 기록 저장 · ${md(M.follow)}에 결과 확인 알림`);render();
+}
+function openResult(rid){M={kind:'result',rid,result:null,note:''};showModal(resultModal)}
+function resultModal(){
+  const r=DB.care.find(x=>x.id==M.rid),st=ST(r.sid);let auto='';
+  if(r.area=='word'){const sc=scoresOf(r.sid),b=sc.filter(x=>x.date<=r.created).at(-1),a=sc.filter(x=>x.date>r.created).at(-1);
+    if(b)auto=`<div class="formula" style="margin-top:12px">자동 연결 점수: 조치 전 <b>${b.score}</b>/30 (${md(b.date)}) → ${a?`조치 후 <b>${a.score}</b>/30 (${md(a.date)}) · <b>${a.score-b.score>=0?'+':''}${a.score-b.score}점</b>`:'조치 후 점수 없음'}</div>`}
+  return `<h3>결과 입력 · ${esc(st.name)}</h3><div style="margin-top:14px">${careFlow({...r,result:M.result})}</div>${auto}
+  <label class="lb">결과</label><div class="seg">${Object.entries(RESULTS).map(([k,l],i)=>`<button class="${M.result==k?'on '+['g','a','r'][i]:''}" onclick="M.result='${k}';rm()">${l}</button>`).join('')}</div>
+  <label class="lb">메모 (선택)</label><input id="mn" value="${esc(M.note)}" oninput="M.note=this.value" placeholder="예: 재시험 27/30 통과">
+  <div class="mfoot"><button class="btn" onclick="closeModal()">취소</button><button class="btn pri" onclick="saveResult()">저장</button></div>`;
+}
+function saveResult(){
+  if(!M.result)return toast('결과를 골라주세요',1);
+  const r=DB.care.find(x=>x.id==M.rid);r.result=M.result;r.result_note=M.note;closeModal();toast('결과 저장 · 목록에서 빠짐');render();
+}
+function openTicket(sid){M={kind:'ticket',sid,reason:'교사 지정',task:''};showModal(ticketModal)}
+function ticketModal(){
+  const st=ST(M.sid);
+  return `<h3>나머지 티켓 발행 · ${esc(st.name)}</h3>
+  <label class="lb">사유</label>${chips([['단어 기준 미달','단어 기준 미달'],['숙제 미완','숙제 미완'],['교사 지정','교사 지정']],M.reason,'reason')}
+  <label class="lb">해야 할 과제</label><div class="chips" style="margin-bottom:10px">${['단어 재시험','독해 숙제 완료','듣기 숙제 완료','문법 오답 정리','에세이 수정본'].map(t=>`<button class="chip ${M.task==t?'on':''}" onclick="M.task='${t}';rm()">${t}</button>`).join('')}</div>
+  <input id="mt" value="${esc(M.task)}" oninput="M.task=this.value" placeholder="직접 입력">
+  <div class="small muted" style="margin-top:10px">발행하면 오늘 강당 조교 명단에 바로 올라갑니다. 미완료 시 다음 회차로 자동 이월.</div>
+  <div class="mfoot"><button class="btn" onclick="closeModal()">취소</button><button class="btn pri" onclick="saveTicket()">발행</button></div>`;
+}
+function saveTicket(){
+  if(!M.task.trim())return toast('과제를 입력해주세요',1);
+  DB.tickets.push({id:nid('TK'),sid:M.sid,issuedBy:ME.id,reason:M.reason,task:M.task.trim(),src:TODAY,from:null,status:'open',avail:TODAY});
+  closeModal();toast('티켓 발행 · 강당 명단에 추가');render();
+}
+
+/* ============ 점수·숙제·출결 입력 (F2) ============ */
+let ENT={cls:null},DRAFT={};
+function entryPage(){
+  const cls=ME.role=='teacher'?DB.classes.filter(c=>c.teacher==ME.id):DB.classes.filter(c=>c.type=='homeroom');
+  if(!cls.find(c=>c.id==ENT.cls))ENT.cls=(cls.find(c=>DB.sessions.some(s=>s.cls==c.id&&s.pending))||cls[0]).id;
+  const c=CL(ENT.cls),sess=DB.sessions.filter(s=>s.cls==c.id).at(-1),ro=ME.role=='director';
+  const studs=studentsOf(c.id);
+  if(!DRAFT[sess.id]){DRAFT[sess.id]={};studs.forEach(s=>{
+    const a=DB.att.find(x=>x.sess==sess.id&&x.sid==s.id),sc=DB.scores.find(x=>x.sess==sess.id&&x.sid==s.id),hw={};
+    sess.items.forEach(it=>hw[it]=DB.hw.find(h=>h.sess==sess.id&&h.sid==s.id&&h.item==it)?.status||'');
+    DRAFT[sess.id][s.id]={att:a?.status||'present',score:sc?.score??'',hw}})}
+  const dr=DRAFT[sess.id];
+  const entered=studs.filter(s=>dr[s.id].att=='absent'||dr[s.id].score!=='').length;
+  const sugg=DB.suggestions.filter(x=>x.cls==c.id&&x.status=='pending');
+  return `<div class="card" style="margin-bottom:20px"><div class="chips">${cls.map(x=>{const pend=DB.sessions.some(s=>s.cls==x.id&&s.pending);return `<button class="chip ${x.id==c.id?'on':''}" onclick="ENT.cls='${x.id}';render()">${ME.role!='teacher'?US(x.teacher).name+' · ':''}${dayLabel(x)} ${x.start} ${esc(x.name)}${pend?' <span class="bd a" style="padding:1px 6px">입력 대기</span>':''}</button>`}).join('')}</div></div>
+  <div class="grid g2">
+  <div class="card"><div class="chead"><h3>${esc(c.name)} · ${md(sess.date)} ${sess.date==TODAY?'(오늘)':'(최근 수업)'}</h3>
+    <span class="small muted">${sess.no?sess.no+'회차':'비정규'} · 숙제: ${sess.items.map(i=>HW[i]).join(', ')}</span></div>
+    ${ro?'<div class="small muted" style="margin-bottom:8px">원장은 조회만 가능합니다.</div>':''}
+    <div class="tblw"><table class="t"><tr><th>학생</th><th>출결 <button class="btn sm ghost" ${ro?'disabled':''} onclick="allAtt('${sess.id}')">모두 출석</button></th><th>단어 /30</th>${sess.items.map(it=>`<th style="text-align:center">${HW[it]}<br><button class="btn sm ghost" style="padding:2px 6px" ${ro?'disabled':''} onclick="allHw('${sess.id}','${it}')">전체 O</button></th>`).join('')}</tr>
+    ${studs.map(s=>{const d=dr[s.id],ab=d.att=='absent';return `<tr><td><b>${esc(s.name)}</b></td>
+      <td><div class="seg">${[['present','출석','g'],['late','지각','a'],['absent','결석','r']].map(([k,l,cc])=>`<button class="${d.att==k?'on '+cc:''}" ${ro?'disabled':''} onclick="setAtt('${sess.id}','${s.id}','${k}')">${l}</button>`).join('')}</div></td>
+      <td><div class="row" style="flex-wrap:nowrap;gap:6px"><input class="scin" type="number" min="0" max="30" value="${d.score}" ${ab||ro?'disabled':''} oninput="setScore('${sess.id}','${s.id}',this)"><span id="pb-${s.id}">${scoreBadge(d.score)}</span></div></td>
+      ${sess.items.map(it=>`<td style="text-align:center"><button class="hwb ${d.hw[it]}" ${ab||ro?'disabled':''} onclick="cycHw('${sess.id}','${s.id}','${it}')">${d.hw[it]||'·'}</button></td>`).join('')}</tr>`}).join('')}</table></div>
+    <div class="row" style="margin-top:14px"><div class="sp row" style="gap:10px;flex-wrap:nowrap">${meter(entered/studs.length)}<span class="small muted" style="white-space:nowrap">${entered}/${studs.length} 입력</span></div>
+      ${ro?'':`<button class="btn pri" onclick="saveEntry('${sess.id}')">${ic('check',14)}저장</button>`}</div>
+    <div class="small muted" style="margin-top:8px">숙제 버튼은 누를 때마다 O → △ → X. 단어 ${DB.settings.pass}개 미만·숙제 X는 나머지 대상으로 자동 제안됩니다.</div></div>
+  <div class="stack">
+    <div class="card"><div class="chead"><h3>자동 제안 규칙</h3></div>
+      <div class="formula">단어 &lt; <b>${DB.settings.pass}</b>/30 → "단어 재시험" 제안<br>숙제 <b>X</b> → 해당 과제 티켓 제안<br>숙제 <b>△</b> → 교사 판단 (기본 해제)<br>→ <b>담임 확정</b> 후 발행</div></div>
+    <div class="card"><div class="chead"><h3>확정 대기 제안</h3><span class="bd a">${sugg.length}건</span></div>
+      ${sugg.length?sugg.map(s=>`<div class="task"><b>${esc(ST(s.sid).name)}</b> ${esc(s.task)}<span class="sp"></span><span class="bd ${s.def?'r':'a'}">${s.def?'제안':'판단'}</span></div>`).join('')+(ME.role=='teacher'?`<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn sm" onclick="HOMECLS='${c.id}';nav('home')">내 반 홈에서 확정하기 →</button></div>`:'<div class="small muted" style="margin-top:8px">담임 선생님 화면으로 전송됨</div>'):'<div class="empty">없음</div>'}</div>
+  </div></div>`;
+}
+const scoreBadge=v=>v===''?'':+v>=DB.settings.pass?'<span class="bd g">통과</span>':'<span class="bd r">미달</span>';
+function setAtt(ss,sid,k){DRAFT[ss][sid].att=k;render()}
+function allAtt(ss){Object.values(DRAFT[ss]).forEach(d=>d.att='present');render()}
+function setScore(ss,sid,el){let v=el.value===''?'':Math.max(0,Math.min(30,Math.round(+el.value)));DRAFT[ss][sid].score=v;document.getElementById('pb-'+sid).innerHTML=scoreBadge(v)}
+function cycHw(ss,sid,it){const o=['O','△','X'],d=DRAFT[ss][sid].hw;d[it]=o[(o.indexOf(d[it])+1)%3];render()}
+function allHw(ss,it){Object.values(DRAFT[ss]).forEach(d=>{if(d.att!='absent')d.hw[it]='O'});render()}
+function saveEntry(ssid){
+  const sess=DB.sessions.find(s=>s.id==ssid),dr=DRAFT[ssid];
+  const miss=Object.entries(dr).filter(([,d])=>d.att!='absent'&&d.score==='').map(([sid])=>ST(sid).name);
+  if(miss.length)return toast('단어 점수 미입력: '+miss.join(', '),1);
+  DB.att=DB.att.filter(a=>a.sess!=ssid);DB.scores=DB.scores.filter(a=>a.sess!=ssid);DB.hw=DB.hw.filter(a=>a.sess!=ssid);
+  let n=0;
+  Object.entries(dr).forEach(([sid,d])=>{
+    DB.att.push({sid,sess:ssid,date:sess.date,status:d.att});
+    if(d.att=='absent')return;
+    DB.scores.push({id:nid('SC'),sid,sess:ssid,date:sess.date,type:'word',score:+d.score,max:30,passed:+d.score>=DB.settings.pass});
+    const sug=[];
+    if(+d.score<DB.settings.pass)sug.push(['단어 기준 미달',`단어 재시험 (${d.score}/30)`,true]);
+    Object.entries(d.hw).forEach(([it,v])=>{if(v)DB.hw.push({sid,sess:ssid,date:sess.date,item:it,status:v});
+      if(v=='X')sug.push(['숙제 미완',`${HW[it]} 숙제 완료`,true]);if(v=='△')sug.push(['숙제 부분',`${HW[it]} 숙제 마무리`,false])});
+    sug.forEach(([reason,task,def])=>{
+      if(DB.tickets.some(t=>t.sid==sid&&t.src==sess.date&&t.task==task)||DB.suggestions.some(x=>x.sid==sid&&x.sess==ssid&&x.task==task&&x.status=='pending'))return;
+      DB.suggestions.push({id:nid('SG'),cls:sess.cls,sess:ssid,date:sess.date,sid,reason,task,def,sel:def,status:'pending'});n++});
+  });
+  sess.pending=false;delete DRAFT[ssid];
+  toast(`저장 완료 · 나머지 제안 ${n}건 → ${ME.role=='assistant'?'담임 확정 대기로 전송':'아래에서 확정'}`);render();
+}
+
+/* ============ 강당 나머지 (F4) ============ */
+let RS={};
+function remedialPage(){
+  const ro=ME.role!='assistant',scope=new Set(myStudents().map(s=>s.id));
+  const open=DB.tickets.filter(t=>t.status=='open'&&t.avail<=TODAY&&scope.has(t.sid));
+  const by={};open.forEach(t=>(by[t.sid]=by[t.sid]||[]).push(t));
+  const tl=DB.logs.filter(l=>l.date==TODAY&&scope.has(l.sid));
+  const doneBy={};tl.forEach(l=>(doneBy[l.sid]=doneBy[l.sid]||[]).push(l));
+  const nW=Object.keys(by).length,nD=Object.keys(doneBy).length,nC=Object.values(doneBy).filter(ls=>ls.every(l=>l.outcome=='done')).length;
+  const carried=open.filter(t=>t.from).length;
+  return `<div class="grid g4" style="margin-bottom:20px">
+    <div class="card kpi">${ring((nD)/Math.max(1,nW+nD),{center:nW,sub:'대기'})}<div><div class="kt">대기 명단</div><div class="kv">${nW}명</div><div class="ks">과제 ${open.length}건</div></div></div>
+    <div class="card kpi">${ring(nD?nC/nD:0,{center:nD,sub:'처리',color:COL.b})}<div><div class="kt">처리 완료</div><div class="kv">${nD}명</div><div class="ks">완료 ${nC} · 부분/미완 ${nD-nC}</div></div></div>
+    <div class="card kpi">${ring(carried/Math.max(1,open.length),{center:carried,sub:'이월',color:COL.a})}<div><div class="kt">이월 과제</div><div class="kv">${carried}건</div><div class="ks">완료될 때까지 남음</div></div></div>
+    <div class="card"><div class="kt small muted b">진행 규칙</div><div class="small" style="margin-top:6px;line-height:1.7">입장 → 20분·40분 체크 → 퇴실 결과<br>당일 연장 없음 (셔틀) · 미완은 다음 회차 이월</div></div>
+  </div>
+  ${ro?`<div class="card in" style="margin-bottom:20px"><span class="small">조회 화면입니다. 결과 입력은 <b>조교</b> 역할에서 할 수 있습니다.</span></div>`:''}
+  <div class="rgrid">${Object.entries(by).map(([sid,ts])=>remCard(sid,ts,ro)).join('')||'<div class="card empty">대기 학생이 없습니다</div>'}</div>
+  <div class="card" style="margin-top:20px"><div class="chead"><h3>오늘 처리 결과</h3><span class="small muted">담당 교사 화면에 자동 요약됩니다</span></div>
+    ${nD?`<div class="tblw"><table class="t"><tr><th>학생</th><th>과제</th><th>결과</th><th>소요</th><th>태도</th><th>추가 과제</th></tr>${tl.map(l=>`<tr><td><b>${esc(ST(l.sid).name)}</b></td><td>${esc(l.task)}</td><td>${outBadge(l.outcome)}</td><td class="small">${PASS[l.pass]}</td><td class="small">${ATT[l.att]}</td><td class="small">${l.extra?esc(DB.extra.find(e=>e.id==l.extra)?.title)+(l.extraDone?' ✓':''):'–'}</td></tr>`).join('')}</table></div>`:'<div class="empty">아직 없음</div>'}</div>`;
+}
+function remCard(sid,ts,ro){
+  const st=ST(sid),r=RS[sid]||(RS[sid]={});
+  const seg=(k,opts,cls=[])=>`<div class="seg">${opts.map(([v,l],i)=>`<button class="${r[k]==v?'on '+(cls[i]||'b'):''}" ${ro?'disabled':''} onclick="rs('${sid}','${k}','${v}')">${l}</button>`).join('')}</div>`;
+  const stages=STAGE.map((l,i)=>[String(i),l]);
+  const ex=DB.extra.filter(e=>e.active&&(e.level=='all'||e.level==st.level));
+  const taps=['in','out','pass','att'].filter(k=>r[k]).length;
+  return `<div class="card rc"><div class="row">${avatar(st.name)}<div class="sp"><div class="b" style="font-size:16px">${esc(st.name)}</div><div class="small muted">과제 ${ts.length}건</div></div>
+    ${ro?'<span class="bd n">대기</span>':`<div class="stepper">${[0,1,2,3].map(i=>`<i class="${i<taps?'on':''}"></i>`).join('')}</div>`}</div>
+    ${ts.map(t=>`<div class="task">${t.from?'<span class="bd a">이월</span>':'<span class="bd b">오늘</span>'} ${esc(t.task)}</div>`).join('')}
+    ${ro?'':`<div class="rrow"><span class="lab">입장</span>${r.in?`<span class="bd g">${r.in} 입장</span>`:`<button class="btn sm pri" onclick="rs('${sid}','in',nowHM())">입장 체크</button>`}</div>
+    <div class="rrow"><span class="lab">20분</span>${seg('c20',stages)}</div>
+    <div class="rrow"><span class="lab">40분</span>${seg('c40',stages)}</div>
+    <div class="rrow"><span class="lab">결과</span>${seg('out',Object.entries(OUTCOME),['g','a','r'])}</div>
+    <div class="rrow"><span class="lab">소요</span>${seg('pass',Object.entries(PASS))}</div>
+    <div class="rrow"><span class="lab">태도</span>${seg('att',Object.entries(ATT),['g','','r'])}</div>
+    ${r.out=='done'&&(r.pass=='10'||r.pass=='30')?`<div class="rrow"><span class="lab">추가 과제</span><select style="flex:1;min-width:150px" onchange="RS['${sid}'].extra=this.value"><option value="">셔틀 전 추가 과제 배정</option>${ex.map(e=>`<option value="${e.id}" ${r.extra==e.id?'selected':''}>${esc(e.title)}</option>`).join('')}</select>
+      <label class="toggle"><input type="checkbox" ${r.extraDone?'checked':''} onchange="RS['${sid}'].extraDone=this.checked"><i></i>완료</label></div>`:''}
+    <div class="rrow"><input placeholder="메모 (선택)" value="${esc(r.memo||'')}" oninput="RS['${sid}'].memo=this.value" style="flex:1"><button class="btn pri" onclick="saveRem('${sid}')">저장</button></div>`}</div>`;
+}
+function rs(sid,k,v){RS[sid][k]=r0(RS[sid][k],v);render()}
+const r0=(cur,v)=>cur===v?undefined:v;
+function saveRem(sid){
+  const r=RS[sid]||{},miss=[];
+  if(!r.in)miss.push('입장');if(!r.out)miss.push('결과');if(!r.att)miss.push('태도');
+  if(r.out=='done'&&!r.pass)miss.push('소요 시간');
+  if(r.pass!='10'&&r.c20==null)miss.push('20분 체크');
+  if(!(r.out=='done'&&(r.pass=='10'||r.pass=='30'))&&r.c40==null)miss.push('40분 체크');
+  if(miss.length)return toast('필수: '+miss.join(', '),1);
+  const ts=DB.tickets.filter(t=>t.sid==sid&&t.status=='open'&&t.avail<=TODAY);
+  ts.forEach(t=>{
+    t.status=r.out;
+    DB.logs.push({id:nid('LG'),ticket:t.id,sid,task:t.task,date:TODAY,assistant:ME.id,checkIn:r.in,c20:r.c20==null?null:+r.c20,c40:r.c40==null?null:+r.c40,outcome:r.out,pass:r.pass||'60',att:r.att,extra:r.extra||null,extraDone:!!r.extraDone,memo:r.memo||''});
+    if(r.out!='done')DB.tickets.push({id:nid('TK'),sid,issuedBy:t.issuedBy,reason:t.reason,task:t.task,src:t.src,from:t.id,status:'open',avail:addDays(TODAY,1)});
+  });
+  delete RS[sid];
+  const inc=termInc(sid);
+  toast(r.out=='done'?'저장 · 완료':`저장 · 미완 과제 다음 회차로 이월${inc>=DB.settings.incompleteRisk?' · ⚠ 학기 미완 '+inc+'회 → 원장 위험 학생 등록':inc==2?' · 담임에게 케어 기록 초안 생성':''}`);render();
+}
+
+/* ============ 학생 검색 / 타임라인 (F7) ============ */
+function studentsPage(){
+  if(ME.role=='assistant')return deny();
+  const list=myStudents();
+  return `<div class="card"><div class="chead"><h3>학생 ${list.length}명</h3><div style="width:260px"><input placeholder="이름·학교·반 검색" oninput="filterRows(this.value)"></div></div>
+  <div class="tblw"><table class="t" id="stbl"><tr><th>학생</th><th>학년 · 학교</th><th>반</th><th>담임</th><th>단어 추이</th><th>위험</th></tr>
+  ${list.map(s=>`<tr class="click" data-q="${esc(s.name+s.school+CL(s.cls).name+s.grade)}" onclick="nav('timeline',{sid:'${s.id}'})"><td><div class="row" style="gap:8px;flex-wrap:nowrap">${avatar(s.name)}<b>${esc(s.name)}</b></div></td><td class="small">${s.grade} · ${s.school}</td><td class="small">${esc(CL(s.cls).name)}</td><td class="small">${US(s.homeroom).name}</td><td>${spark(scoresOf(s.id).slice(-10).map(x=>x.score),{ref:DB.settings.pass})}</td><td>${riskOf(s).map(([t,c])=>`<span class="bd ${c}">${t}</span>`).join(' ')}</td></tr>`).join('')}</table></div></div>`;
+}
+function filterRows(q){document.querySelectorAll('#stbl tr[data-q]').forEach(tr=>tr.style.display=tr.dataset.q.includes(q)?'':'none')}
+const deny=()=>`<div class="card empty">이 화면은 권한이 없습니다. (조교는 성적 이력·케어 기록·상담 내용을 볼 수 없습니다)</div>`;
+let TLF='all';
+function timelinePage({sid}){
+  if(ME.role=='assistant')return deny();
+  const st=ST(sid);if(!myStudents().includes(st))return deny();
+  const sc=scoresOf(sid),hw=DB.hw.filter(h=>h.sid==sid),care=DB.care.filter(r=>r.sid==sid),logs=logsOf(sid),shw=DB.showcase.filter(x=>x.sid==sid);
+  const r4=sc.filter(x=>x.date>addDays(TODAY,-28)),hw4=hw.filter(h=>h.date>addDays(TODAY,-28)),lg4=logs.filter(l=>l.date>addDays(TODAY,-28));
+  const ev=[];
+  if(TLF=='all'||TLF=='score')sc.forEach(x=>ev.push({date:x.date,ic:'단',c:x.passed?'g':'r',h:`단어 <b>${x.score}</b>/30 ${x.passed?'<span class="bd g">통과</span>':'<span class="bd r">미달</span>'}`}));
+  if(TLF=='all'||TLF=='hw'){hw.filter(h=>h.status!='O').forEach(h=>ev.push({date:h.date,ic:'숙',c:h.status=='X'?'r':'a',h:`${HW[h.item]} 숙제 <b>${h.status}</b>`}));
+    DB.att.filter(a=>a.sid==sid&&a.status!='present').forEach(a=>ev.push({date:a.date,ic:'출',c:a.status=='absent'?'r':'a',h:a.status=='absent'?'결석':'지각'}))}
+  if(TLF=='all'||TLF=='care')care.forEach(r=>ev.push({date:r.created,ic:'케',c:'b',h:`<div style="flex:1"><div class="small muted" style="margin-bottom:4px">${US(r.teacher).name} · ${r.cand?'리포트 후보':''}</div>${careFlow(r)}</div>`}));
+  if(TLF=='all'||TLF=='rem')logs.forEach(l=>ev.push({date:l.date,ic:'나',c:l.outcome=='done'?'g':l.outcome=='partial'?'a':'r',h:`나머지 · ${esc(l.task)} ${outBadge(l.outcome)} <span class="small muted">${PASS[l.pass]} · ${ATT[l.att]}</span>`}));
+  if(TLF=='all'||TLF=='show')shw.forEach(x=>ev.push({date:x.month+'-28',ic:'★',c:'g',h:`${+x.month.slice(5)}월 대표작 · ${x.kind=='essay'?'에세이':'스피킹'} — "${esc(x.comment)}"`}));
+  ev.sort((a,b)=>a.date<b.date?1:-1);
+  const grp={};ev.forEach(e=>(grp[e.date]=grp[e.date]||[]).push(e));
+  const icC={g:'background:var(--acc-soft);color:var(--acc-ink)',r:'background:var(--red-soft);color:#b8432f',a:'background:var(--amber-soft);color:#a86a10',b:'background:var(--blue-soft);color:#2f5bb4'};
+  const hr=hw4.length?hw4.filter(h=>h.status=='O').length/hw4.length:0,pr=r4.length?r4.filter(x=>x.passed).length/r4.length:0,lr=lg4.length?lg4.filter(l=>l.outcome=='done').length/lg4.length:null;
+  const canW=ME.role!='director';
+  return `<div class="grid gside">
+   <div class="stack">
+    <div class="card" style="text-align:center">${avatar(st.name,'lg')}<h3 style="margin-top:12px;font-size:19px">${esc(st.name)}</h3><div class="small muted">${st.grade} · ${st.school}</div>
+      <div class="row" style="justify-content:center;margin-top:10px">${riskOf(st).map(([t,c])=>`<span class="bd ${c}">${t}</span>`).join(' ')||'<span class="bd g">위험 신호 없음</span>'}</div>
+      <div class="stack" style="gap:8px;margin-top:16px;text-align:left;font-size:13px">
+        <div class="row"><span class="muted" style="width:60px">담임반</span><b>${esc(CL(st.cls).name)}</b></div>
+        <div class="row"><span class="muted" style="width:60px">담임</span>${US(st.homeroom).name}</div>
+        <div class="row"><span class="muted" style="width:60px">원어민</span>${esc(CL(st.nclass).name)}</div>
+        <div class="row"><span class="muted" style="width:60px">학부모</span>${st.phone.replace(/-(\d{4})-/,'-****-')}</div></div>
+      <div class="stack" style="gap:8px;margin-top:16px"><button class="btn pri" onclick="openConsult('${sid}')">${ic('spark',14)}상담 요약</button>${canW?`<button class="btn" onclick="openCare('${sid}')">${ic('plus',14)}케어 기록</button>`:''}<button class="btn" onclick="REP.sid='${sid}';nav('report')">${ic('file',14)}리포트 데이터</button></div></div>
+    <div class="card"><h4 style="margin-bottom:12px">최근 4주</h4><div class="grid g2e" style="gap:14px;justify-items:center">
+      <div style="text-align:center">${ring((avg(r4)||0)/30,{center:avg(r4)?.toFixed(1)??'–',sub:'/30 평균'})}<div class="small muted">단어 평균</div></div>
+      <div style="text-align:center">${ring(pr,{color:COL.b})}<div class="small muted">통과율</div></div>
+      <div style="text-align:center">${ring(hr,{color:hr<.75?COL.a:COL.g})}<div class="small muted">숙제 제출률</div></div>
+      <div style="text-align:center">${ring(lr??0,{center:lr==null?'–':pct(lr),color:COL.a})}<div class="small muted">나머지 완료율</div></div></div></div>
+   </div>
+   <div class="stack">
+    <div class="card"><div class="chead"><h3>단어 점수 추이</h3><span class="small muted">빨간 점 = 기준 미달 · 점선 = 통과 기준</span></div>
+      ${lineChart(sc.slice(-20).map(x=>({l:md(x.date),v:x.score,c:x.passed?null:'var(--red)'})),{min:10,max:30,ref:DB.settings.pass,refLabel:'통과 '+DB.settings.pass})}</div>
+    <div class="card"><div class="chead"><h3>기록 타임라인</h3><div class="seg">${[['all','전체'],['score','점수'],['hw','숙제·출결'],['care','케어'],['rem','나머지'],['show','대표작']].map(([k,l])=>`<button class="${TLF==k?'on':''}" onclick="TLF='${k}';render()">${l}</button>`).join('')}</div></div>
+      <div class="tl">${Object.entries(grp).slice(0,25).map(([d,es])=>`<div class="tld">${md(d)} (${WD[D(d).getDay()]})</div>${es.map(e=>`<div class="ev"><span class="ic" style="${icC[e.c]}">${e.ic}</span><div style="flex:1;min-width:0">${e.h}</div></div>`).join('')}`).join('')||'<div class="empty">기록 없음</div>'}</div></div>
+   </div></div>`;
+}
+function openConsult(sid){
+  const st=ST(sid),sc=scoresOf(sid),r4=sc.filter(x=>x.date>addDays(TODAY,-28)),p4=sc.filter(x=>x.date<=addDays(TODAY,-28)&&x.date>addDays(TODAY,-56));
+  const a=avg(r4),b=avg(p4),hw=DB.hw.filter(h=>h.sid==sid&&h.date>addDays(TODAY,-28)),hr=hw.length?hw.filter(h=>h.status=='O').length/hw.length:0;
+  const care=DB.care.filter(r=>r.sid==sid&&r.created>addDays(TODAY,-28)),lg=DB.logs.filter(l=>l.sid==sid&&l.date>addDays(TODAY,-28));
+  const sh=DB.showcase.filter(x=>x.sid==sid).sort((x,y)=>x.month<y.month?1:-1)[0];
+  const pts=[];
+  if(a&&b&&a<b-1)pts.push(`단어 평균이 ${b.toFixed(1)} → ${a.toFixed(1)}로 내려갔습니다. 집에서 단어 외우는 시간을 확인해 주세요.`);
+  if(a&&b&&a>b+1)pts.push(`단어 평균이 ${b.toFixed(1)} → ${a.toFixed(1)}로 올랐습니다. 노력한 점을 먼저 칭찬해 주세요.`);
+  if(hr<.8)pts.push(`숙제 제출률 ${pct(hr)} — 미제출이 반복되는 과목을 함께 점검해 주세요.`);
+  if(lg.some(l=>l.outcome=='incomplete'))pts.push('나머지 학습 미완료 귀가가 있었습니다. 이월 과제 진행 상황을 공유해 주세요.');
+  if(care.some(r=>r.result=='improved'))pts.push(`"${care.find(r=>r.result=='improved').finding}" 부분은 조치 후 개선됐습니다 — 학부모에게 근거로 전달하기 좋습니다.`);
+  if(!pts.length)pts.push('특이 신호 없이 안정적입니다. 대표작 성장 포인트 위주로 상담하세요.');
+  M={};showModal(()=>`<div class="row"><h3 class="sp">상담 요약 · ${esc(st.name)}</h3><span class="bd b">AI 요약 (데모: 실제는 Claude API)</span></div>
+  <div class="grid g3" style="gap:12px;margin-top:16px">
+   <div class="card flat" style="text-align:center">${ring((a||0)/30,{center:a?.toFixed(1)??'–',sub:'4주 평균'})}<div class="small muted">${b?`이전 4주 ${b.toFixed(1)} (${a-b>=0?'+':''}${(a-b).toFixed(1)})`:''}</div></div>
+   <div class="card flat" style="text-align:center">${ring(hr,{color:COL.b})}<div class="small muted">숙제 제출률</div></div>
+   <div class="card flat" style="text-align:center">${ring(lg.length?lg.filter(l=>l.outcome=='done').length/lg.length:0,{center:lg.length+'회',sub:'나머지',color:COL.a})}<div class="small muted">완료 ${lg.filter(l=>l.outcome=='done').length}회</div></div></div>
+  <div style="margin-top:14px">${lineChart(sc.slice(-12).map(x=>({l:md(x.date),v:x.score,c:x.passed?null:'var(--red)'})),{min:10,max:30,ref:DB.settings.pass,h:130})}</div>
+  <h4 style="margin:14px 0 8px">케어 기록 (4주) ${care.length}건</h4>${care.map(r=>`<div style="margin-bottom:8px">${careFlow(r)}</div>`).join('')||'<div class="small muted">없음</div>'}
+  ${sh?`<h4 style="margin:14px 0 6px">최근 대표작</h4><div class="small">${+sh.month.slice(5)}월 ${sh.kind=='essay'?'에세이':'스피킹'} — "${esc(sh.comment)}"</div>`:''}
+  <h4 style="margin:16px 0 8px">상담 포인트</h4><div class="formula" style="font-family:inherit;font-size:13px">${pts.map(p=>'• '+esc(p)).join('<br>')}</div>
+  <div class="mfoot"><button class="btn" onclick="closeModal()">닫기</button></div>`);
+}
+
+/* ============ 월말 리포트 (F10) ============ */
+let REP={sid:null,month:'2026-09'};
+const prevMonth=m=>{const d=D(m+'-01');d.setMonth(d.getMonth()-1);return fmt(d).slice(0,7)};
+function bundle(sid,m){
+  const st=ST(sid),pm=prevMonth(m),sc=scoresOf(sid);
+  const hw=DB.hw.filter(h=>h.sid==sid&&h.date.startsWith(m)),lg=DB.logs.filter(l=>l.sid==sid&&l.date.startsWith(m));
+  return{student:{id:st.id,name:st.name,grade:st.grade,school:st.school,class:CL(st.cls).name,homeroom:US(st.homeroom).name},month:m,
+    word:{avg:avg(sc.filter(x=>x.date.startsWith(m))),prev:avg(sc.filter(x=>x.date.startsWith(pm))),tests:sc.filter(x=>x.date.startsWith(m)).length,pass:sc.filter(x=>x.date.startsWith(m)&&x.passed).length},
+    homework:{rate:hw.length?hw.filter(h=>h.status=='O').length/hw.length:null,total:hw.length},
+    remedial:{count:lg.length,done:lg.filter(l=>l.outcome=='done').length},
+    care:DB.care.filter(r=>r.sid==sid&&r.created.startsWith(m)&&r.cand),
+    showcase:{this:DB.showcase.find(x=>x.sid==sid&&x.month==m)||null,prev:DB.showcase.find(x=>x.sid==sid&&x.month==pm)||null}};
+}
+function aiDraft(b){
+  const n=b.student.name.slice(1),a=b.word.avg,p=b.word.prev,imp=b.care.filter(r=>r.result=='improved');
+  const s=[];
+  if(a!=null&&p!=null)s.push(a>=p?`이번 달 단어 평균은 ${a.toFixed(1)}점으로 지난달(${p.toFixed(1)}점)보다 올랐습니다.`:`이번 달 단어 평균은 ${a.toFixed(1)}점으로 지난달(${p.toFixed(1)}점)보다 조금 낮아져, 복습 루틴을 함께 다시 잡고 있습니다.`);
+  imp.slice(0,2).forEach(r=>s.push(`수업 중 "${r.finding}" 부분을 발견해 ${ACTIONS[r.action]}로 챙겼고, 이후 개선된 모습을 확인했습니다.`));
+  if(b.homework.rate!=null)s.push(`숙제 제출률은 ${pct(b.homework.rate)}입니다.`);
+  if(b.showcase.this)s.push(`이번 달 대표작(${b.showcase.this.kind=='essay'?'에세이':'스피킹'})에서는 ${b.showcase.this.comment}.`);
+  s.push(`다음 달에는 ${a!=null&&a<24?'단어 통과 기준을 안정적으로 넘는 것':'지금의 좋은 흐름을 유지하며 독해·문법 응용'}을 목표로 지도하겠습니다.`);
+  return `${n} 학생 ${+b.month.slice(5)}월 리포트\n\n`+s.join(' ');
+}
+function reportPage(){
+  if(ME.role=='assistant'||ME.role=='native_teacher')return deny();
+  const list=myStudents();if(!REP.sid||!list.find(s=>s.id==REP.sid))REP.sid=list[0].id;
+  const b=bundle(REP.sid,REP.month),key=REP.sid+'|'+REP.month;
+  const cm=DB.comments[key]||(DB.comments[key]={draft:aiDraft(b),approvedBy:null,picked:b.care.filter(r=>r.result=='improved').map(r=>r.id)});
+  const shBox=(x,t)=>`<div class="card flat" style="flex:1;min-width:150px"><div class="small muted b">${t}</div>${x?`<div style="margin:8px 0"><span class="bd ${x.kind=='essay'?'b':'g'}">${x.kind=='essay'?'에세이':'스피킹'}</span></div><div class="small">"${esc(x.comment)}"</div>`:'<div class="small muted" style="margin-top:8px">미선택</div>'}</div>`;
+  return `<div class="card" style="margin-bottom:20px"><div class="row"><div style="width:280px"><select onchange="REP.sid=this.value;render()">${list.map(s=>`<option value="${s.id}" ${s.id==REP.sid?'selected':''}>${esc(s.name)} · ${esc(CL(s.cls).name)}</option>`).join('')}</select></div>
+    <div class="seg">${['2026-08','2026-09'].map(m=>`<button class="${REP.month==m?'on':''}" onclick="REP.month='${m}';render()">${+m.slice(5)}월</button>`).join('')}</div><span class="sp"></span>
+    <button class="btn" onclick="dlJSON()">${ic('dl',14)}JSON 내보내기</button>${ME.role=='director'?`<button class="btn" onclick="dlAll()">${ic('dl',14)}전체 학생 CSV</button>`:''}</div></div>
+  <div class="grid g2">
+   <div class="stack">
+    <div class="card"><div class="chead"><h3>${esc(b.student.name)} · ${+REP.month.slice(5)}월 데이터 묶음</h3><span class="small muted">리포트 카드 생성의 입력</span></div>
+      <div class="grid g3" style="gap:12px">
+        <div class="card flat" style="text-align:center">${ring((b.word.avg||0)/30,{center:b.word.avg?.toFixed(1)??'–',sub:'단어 평균'})}<div class="small ${b.word.prev&&b.word.avg>=b.word.prev?'':'muted'}">${b.word.prev?`전월 ${b.word.prev.toFixed(1)} → ${(b.word.avg-b.word.prev>=0?'+':'')+(b.word.avg-b.word.prev).toFixed(1)}`:'전월 없음'}</div></div>
+        <div class="card flat" style="text-align:center">${ring(b.homework.rate,{color:COL.b})}<div class="small muted">숙제 제출률</div></div>
+        <div class="card flat" style="text-align:center">${ring(b.remedial.count?b.remedial.done/b.remedial.count:0,{center:b.remedial.count+'회',sub:'나머지',color:COL.a})}<div class="small muted">완료 ${b.remedial.done}회</div></div></div>
+      <h4 style="margin:18px 0 8px">전월 대비</h4>${bars([{l:prevMonth(REP.month).slice(5)+'월 단어',v:+(b.word.prev||0).toFixed(1),c:COL.n},{l:REP.month.slice(5)+'월 단어',v:+(b.word.avg||0).toFixed(1),c:COL.g},{l:'통과',v:b.word.pass,c:COL.b},{l:'시험 수',v:b.word.tests,c:'#b9c3c8'}],{max:30})}
+      <h4 style="margin:18px 0 8px">대표작 비교</h4><div class="row" style="align-items:stretch">${shBox(b.showcase.prev,prevMonth(REP.month).slice(5)+'월')}${shBox(b.showcase.this,REP.month.slice(5)+'월')}</div></div>
+    <div class="card"><div class="chead"><h3>리포트 후보 케어 기록</h3><span class="small muted">담임이 골라서 문장으로 가공 · 원본은 공개 안 함</span></div>
+      ${b.care.length?b.care.map(r=>`<label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;cursor:pointer"><input type="checkbox" style="margin-top:12px" ${cm.picked.includes(r.id)?'checked':''} onchange="pickCare('${key}','${r.id}',this.checked)"><div style="flex:1">${careFlow(r)}</div></label>`).join(''):'<div class="empty">후보 없음</div>'}</div>
+   </div>
+   <div class="card" style="align-self:start"><div class="chead"><h3>AI 초안 코멘트</h3>${cm.approvedBy?`<span class="bd g">승인됨 · ${US(cm.approvedBy).name}</span>`:'<span class="bd a">검토 대기</span>'}</div>
+     <div class="small muted" style="margin-bottom:10px">데모에서는 템플릿으로 생성합니다. 실제는 해당 학생 기록만 Claude API로 보내 생성하며, 승인 전에는 학부모에게 나가지 않습니다.</div>
+     <textarea rows="13" oninput="DB.comments['${key}'].draft=this.value">${esc(cm.draft)}</textarea>
+     <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn" onclick="DB.comments['${key}'].draft=aiDraft(bundle(REP.sid,REP.month));render()">다시 생성</button><button class="btn pri" onclick="DB.comments['${key}'].approvedBy=ME.id;toast('승인 완료');render()">${ic('check',14)}승인</button></div></div>
+  </div>`;
+}
+function pickCare(key,id,v){const p=DB.comments[key].picked;if(v)p.push(id);else p.splice(p.indexOf(id),1)}
+function dlJSON(){const b=bundle(REP.sid,REP.month),cm=DB.comments[REP.sid+'|'+REP.month];
+  dl(`리포트_${b.student.name}_${REP.month}.json`,JSON.stringify({...b,care:b.care.filter(r=>cm.picked.includes(r.id)),comment:cm},null,2),'application/json');toast('JSON 내보내기')}
+function dlAll(){dl(`리포트데이터_${REP.month}.csv`,csv([['학생','학년','반','담임','단어 평균','전월','숙제 제출률','나머지 횟수','나머지 완료','리포트 후보 수'],...DB.students.map(s=>{const b=bundle(s.id,REP.month);return[s.name,s.grade,b.student.class,b.student.homeroom,b.word.avg?.toFixed(1),b.word.prev?.toFixed(1),pct(b.homework.rate),b.remedial.count,b.remedial.done,b.care.length]})]));toast('CSV 다운로드')}
+
+/* ============ 대표작 (F8) ============ */
+function showcasePage(){
+  const list=myStudents(),m='2026-10',pm='2026-09';
+  const done=list.filter(s=>DB.showcase.some(x=>x.sid==s.id&&x.month==m)).length;
+  return `<div class="grid g4" style="margin-bottom:20px"><div class="card kpi">${ring(done/list.length,{center:done,sub:'/'+list.length})}<div><div class="kt">10월 대표작 선택</div><div class="kv">${pct(done/list.length)}</div><div class="ks">월 1회 필수</div></div></div></div>
+  <div class="card"><div class="chead"><h3>10월 대표작</h3><span class="small muted">학생별 에세이 1편 또는 스피킹 영상 1개 · 9월과 나란히 비교</span></div>
+  ${list.map(s=>{const p=DB.showcase.find(x=>x.sid==s.id&&x.month==pm),c=DB.showcase.find(x=>x.sid==s.id&&x.month==m);
+   return `<div class="grid g2e" style="gap:14px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)">
+    <div class="row" style="align-items:flex-start;flex-wrap:nowrap">${avatar(s.name)}<div><b>${esc(s.name)}</b> <span class="small muted">${esc(CL(s.nclass).name)}</span>
+      <div class="card flat" style="margin-top:8px;padding:12px"><span class="small muted b">9월</span> ${p?`<span class="bd ${p.kind=='essay'?'b':'g'}">${p.kind=='essay'?'에세이':'스피킹'}</span><div class="small" style="margin-top:4px">"${esc(p.comment)}"</div>`:'없음'}</div></div></div>
+    <div>${c?`<div class="card flat" style="padding:12px;background:var(--acc-soft)"><span class="small b" style="color:var(--acc-ink)">10월 ✓</span> <span class="bd ${c.kind=='essay'?'b':'g'}">${c.kind=='essay'?'에세이':'스피킹'}</span><div class="small" style="margin-top:4px">"${esc(c.comment)}"</div><div class="small muted">${esc(c.url)}</div></div>`:
+      `<div class="row"><div class="seg" id="k-${s.id}" data-v="essay"><button class="on" onclick="pickKind('${s.id}','essay',this)">에세이</button><button onclick="pickKind('${s.id}','speaking',this)">스피킹</button></div></div>
+       <input id="u-${s.id}" placeholder="파일 링크 (구글 드라이브, 유튜브 비공개)" style="margin-top:8px"><div class="row" style="margin-top:8px;flex-wrap:nowrap"><input id="c-${s.id}" placeholder="한 줄 코멘트"><button class="btn pri" onclick="saveShow('${s.id}')">저장</button></div>`}</div></div>`}).join('')}</div>`;
+}
+function pickKind(sid,k,el){const g=document.getElementById('k-'+sid);g.dataset.v=k;g.querySelectorAll('button').forEach(b=>b.classList.remove('on'));el.classList.add('on')}
+function saveShow(sid){
+  const c=document.getElementById('c-'+sid).value.trim();if(!c)return toast('한 줄 코멘트를 입력해주세요',1);
+  DB.showcase.push({id:nid('SH'),sid,month:'2026-10',kind:document.getElementById('k-'+sid).dataset.v,url:document.getElementById('u-'+sid).value.trim()||'(링크 없음)',comment:c});toast('대표작 저장');render();
+}
+
+/* ============ 관리·설정 ============ */
+let ADM='settings';
+function adminPage(){
+  if(ME.role!='director')return deny();
+  const S=DB.settings;
+  const SET=[['pass','단어 통과 기준 (30문항 중)','개'],['dropPct','점수 하락 경고 (최근 3회 평균 대비)','%'],['gapDays','기록 공백 기준','일'],['fastPass','나머지 10분 통과 경고 (4주)','회'],['maxCare','오늘 챙길 학생 최대','명'],['incompleteRisk','위험: 나머지 미완 누적 (학기)','회'],['riskDropPct','위험: 4주 평균 하락','%'],['worseRisk','위험: 결과 악화','건'],['riskGapDays','위험: 기록 공백','일']];
+  const tab=`<div class="seg" style="margin-bottom:20px">${[['settings','기준값 설정'],['extra','추가 과제 메뉴'],['students','학생·반'],['users','사용자']].map(([k,l])=>`<button class="${ADM==k?'on':''}" onclick="ADM='${k}';render()">${l}</button>`).join('')}</div>`;
+  if(ADM=='settings')return tab+`<div class="card"><div class="chead"><h3>자동 규칙 기준값</h3><span class="small muted">시범 운영 초기값 · 바꾸면 모든 화면에 바로 반영</span></div>
+    <div class="grid g3" style="gap:14px">${SET.map(([k,l,u])=>`<div class="card flat"><div class="small muted b">${l}</div><div class="row" style="margin-top:8px;flex-wrap:nowrap"><input type="number" value="${S[k]}" onchange="DB.settings['${k}']=+this.value;toast('저장됨')"><span class="muted">${u}</span></div></div>`).join('')}</div></div>`;
+  if(ADM=='extra')return tab+`<div class="card"><div class="chead"><h3>추가 과제 바구니 (레벨별 고정 메뉴)</h3></div>
+    ${DB.extra.map(e=>`<div class="task"><span class="bd n">${e.level=='all'?'전체':e.level}</span> ${esc(e.title)}<span class="sp"></span><label class="toggle"><input type="checkbox" ${e.active?'checked':''} onchange="DB.extra.find(x=>x.id=='${e.id}').active=this.checked"><i></i></label></div>`).join('')}
+    <div class="row" style="margin-top:14px;flex-wrap:nowrap"><select id="exL" style="width:150px"><option value="all">전체</option>${['Starter','Basic','Inter','Advanced','Master'].map(l=>`<option>${l}</option>`).join('')}</select><input id="exT" placeholder="새 과제"><button class="btn pri" onclick="addExtra()">추가</button></div></div>`;
+  if(ADM=='users')return tab+`<div class="card"><div class="chead"><h3>사용자</h3><span class="small muted">퇴사 조교 계정은 즉시 비활성화</span></div>
+    <div class="tblw"><table class="t"><tr><th>이름</th><th>역할</th><th>활성</th></tr>${DB.users.map(u=>`<tr><td><div class="row" style="gap:8px">${avatar(u.name)}<b>${esc(u.name)}</b></div></td><td>${ROLE[u.role]}</td><td><label class="toggle"><input type="checkbox" ${u.active?'checked':''} ${u.id==ME.id?'disabled':''} onchange="DB.users.find(x=>x.id=='${u.id}').active=this.checked;toast(this.checked?'활성화':'비활성화')"><i></i></label></td></tr>`).join('')}</table></div></div>`;
+  return tab+`<div class="card"><div class="chead"><h3>학생 ${DB.students.length}명 · 반 ${DB.classes.length}개</h3><button class="btn" onclick="toast('데모에서는 CSV 가져오기가 동작하지 않습니다',1)">${ic('dl',14)}구글 시트 CSV 가져오기</button><button class="btn pri" onclick="toast('데모: 학생 등록 폼은 다음 단계',1)">${ic('plus',14)}학생 등록</button></div>
+    <div class="tblw"><table class="t"><tr><th>이름</th><th>학년</th><th>학교</th><th>담임반</th><th>담임</th><th>원어민반</th><th>상태</th><th>학부모</th></tr>${DB.students.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${s.grade}</td><td>${s.school}</td><td class="small">${dayLabel(CL(s.cls))} ${CL(s.cls).start} ${esc(CL(s.cls).name)}</td><td>${US(s.homeroom).name}</td><td class="small">${esc(CL(s.nclass).name)}</td><td><span class="bd g">${s.status}</span></td><td class="small muted">${s.phone.replace(/-(\d{4})-/,'-****-')}</td></tr>`).join('')}</table></div></div>`;
+}
+function addExtra(){const t=$('#exT').value.trim();if(!t)return;DB.extra.push({id:nid('E'),level:$('#exL').value,title:t,active:true});toast('추가됨');render()}
+
+/* ============ toast & boot ============ */
+let tt;
+function toast(msg,err){$('#toast').innerHTML=`<div class="toast ${err?'err':''}"><span class="ck">${err?'!':'✓'}</span>${esc(msg)}</div>`;clearTimeout(tt);tt=setTimeout(()=>$('#toast').innerHTML='',2600)}
+const PAGES={dashboard,home:homePage,entry:entryPage,remedial:remedialPage,students:studentsPage,timeline:timelinePage,report:reportPage,admin:adminPage,showcase:showcasePage};
+DB=buildData();render();
+</script>
+</body>
