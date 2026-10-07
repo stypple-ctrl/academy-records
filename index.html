@@ -14,7 +14,7 @@
   --bg:#f2f2f7;--card:#ffffff;--surf:#f2f2f7;--fill:rgba(118,118,128,.12);--fill2:rgba(118,118,128,.20);--fill-strong:#c7c7cc;
   --line:rgba(60,60,67,.14);--line2:rgba(60,60,67,.29);
   --text:#000000;--muted:#6c6c70;--faint:#8e8e93;
-  --tint:#007aff;--tint-soft:rgba(0,122,255,.12);--tint-ink:#0062cc;
+  --tint:#007aff;--tint-soft:rgba(0,122,255,.12);--tint-ink:#0062cc;--tint-fill:#0062cc;--on-g:#000;--r-fill:#d70015;--on-r:#fff;
   --acc:#34c759;--acc2:#30b350;--acc-soft:rgba(52,199,89,.15);--acc-ink:#1e7a35;--g-soft:rgba(52,199,89,.18);--g-mid:rgba(52,199,89,.42);--g-ink:#146c2e;
   --red:#ff3b30;--red-soft:rgba(255,59,48,.13);--r-ink:#c4261d;
   --amber:#ff9500;--amber-soft:rgba(255,149,0,.15);--a-ink:#a85c00;
@@ -31,7 +31,7 @@
   --bg:#000000;--card:#1c1c1e;--surf:#2c2c2e;--fill:rgba(118,118,128,.24);--fill2:rgba(118,118,128,.32);--fill-strong:#48484a;
   --line:rgba(84,84,88,.45);--line2:rgba(84,84,88,.65);
   --text:#ffffff;--muted:#98989f;--faint:#8e8e93;
-  --tint:#0a84ff;--tint-soft:rgba(10,132,255,.2);--tint-ink:#409cff;
+  --tint:#0a84ff;--tint-soft:rgba(10,132,255,.2);--tint-ink:#409cff;--tint-fill:#0060df;--on-g:#000;--r-fill:#ff453a;--on-r:#000;
   --acc:#30d158;--acc2:#30d158;--acc-soft:rgba(48,209,88,.2);--acc-ink:#30d158;--g-soft:rgba(48,209,88,.2);--g-mid:rgba(48,209,88,.45);--g-ink:#30d158;
   --red:#ff453a;--red-soft:rgba(255,69,58,.2);--r-ink:#ff6961;
   --amber:#ff9f0a;--amber-soft:rgba(255,159,10,.2);--a-ink:#ffb340;
@@ -39,12 +39,13 @@
   --glass:rgba(30,30,32,.72);--glass-line:rgba(255,255,255,.08);
   --shadow:none;--shadow-lg:0 12px 40px rgba(0,0,0,.6);
 }}
-@media (prefers-contrast:more){:root{--line:rgba(60,60,67,.4);--muted:#3a3a3c;--tint:#0040dd;--acc-ink:#006f1e;--r-ink:#9e0000}}
+@media (prefers-contrast:more) and (prefers-color-scheme:light){:root{--line:rgba(60,60,67,.4);--muted:#3a3a3c;--tint-ink:#0040dd;--tint-fill:#0040dd;--acc-ink:#006f1e;--r-ink:#9e0000;--a-ink:#7a4100}}
+@media (prefers-contrast:more) and (prefers-color-scheme:dark){:root{--line:rgba(160,160,170,.6);--muted:#c7c7cc;--tint-ink:#6cb4ff;--acc-ink:#5ce07a;--r-ink:#ff8a80;--a-ink:#ffc266;--b-ink:#b3b2ff}}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15px;line-height:1.47;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
 button,input,select,textarea{font:inherit;color:inherit}
-a{color:var(--tint);cursor:pointer;text-decoration:none}
+a{color:var(--tint-ink);cursor:pointer;text-decoration:none}
 a:hover{text-decoration:underline}
 .small{font-size:13px}.muted{color:var(--muted)}.b{font-weight:600}
 h1,h2,h3,h4{margin:0;letter-spacing:-.02em}
@@ -62,7 +63,7 @@ h2{font-size:30px;font-weight:700}h3{font-size:17px;font-weight:600}h4{font-size
 .navb{display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:36px;border-radius:8px;border:0;background:transparent;cursor:pointer;text-align:left;color:var(--text);font-weight:500;white-space:nowrap;font-size:15px}
 .navb svg{width:20px;height:20px;flex:none;color:var(--tint)}
 .navb:hover{background:var(--fill)}
-.navb.on{background:var(--tint);color:#fff}.navb.on svg{color:#fff}
+.navb.on{background:var(--tint-fill);color:#fff}.navb.on svg{color:#fff}
 .side .grow{flex:1}
 .promo{border-radius:12px;background:var(--fill);padding:14px;font-size:13px;color:var(--muted);line-height:1.5}
 .promo b{display:block;font-size:15px;margin-bottom:4px;color:var(--text)}
@@ -97,14 +98,14 @@ h2{font-size:30px;font-weight:700}h3{font-size:17px;font-weight:600}h4{font-size
 @media (max-width:980px){.g2,.g2e,.g3,.gside{grid-template-columns:1fr}}
 
 /* ============ buttons: Filled / Gray / Plain (캡슐, 최소 높이 36, 휴대폰 44) ============ */
-.btn{text-decoration:none;border:0;border-radius:99px;padding:8px 16px;min-height:36px;background:var(--fill);cursor:pointer;font-weight:600;font-size:15px;transition:background .15s,opacity .15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;color:var(--tint)}
+.btn{text-decoration:none;border:0;border-radius:99px;padding:8px 16px;min-height:36px;background:var(--fill);cursor:pointer;font-weight:600;font-size:15px;transition:background .15s,opacity .15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;color:var(--tint-ink)}
 .btn:hover{background:var(--fill2);text-decoration:none}
 .btn:active{opacity:.6}
-.btn.pri{background:var(--tint);color:#fff}
+.btn.pri{background:var(--tint-fill);color:#fff}
 .btn.pri:hover{filter:brightness(1.08)}
 .btn.dark{background:var(--fill-strong);color:var(--text)}
 .btn.sm{padding:5px 12px;min-height:30px;font-size:13px}
-.btn.ghost{background:transparent;color:var(--tint)}
+.btn.ghost{background:transparent;color:var(--tint-ink)}
 .btn.ghost:hover{background:var(--fill)}
 .btn.icon{padding:6px;min-width:32px;border-radius:8px}
 .btn:disabled{opacity:.35;cursor:not-allowed}
@@ -112,8 +113,8 @@ h2{font-size:30px;font-weight:700}h3{font-size:17px;font-weight:600}h4{font-size
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{border:0;border-radius:99px;padding:7px 14px;min-height:34px;background:var(--fill);cursor:pointer;font-weight:500;font-size:14px;color:var(--text);white-space:nowrap}
 .chip:hover{background:var(--fill2)}
-.chip.on{color:#fff;background:var(--tint)}
-.chip.on .bd{background:rgba(255,255,255,.25);color:#fff}
+.chip.on{color:#fff;background:var(--tint-fill)}
+.chip.on .bd{background:#fff;color:var(--tint-ink)}
 .chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-left:6px;vertical-align:middle}
 .hscroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
 /* Segmented control: 회색 트랙 + 흰 썸 */
@@ -121,7 +122,7 @@ h2{font-size:30px;font-weight:700}h3{font-size:17px;font-weight:600}h4{font-size
 .seg button{border:0;background:transparent;border-radius:7px;padding:6px 14px;min-height:30px;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;white-space:nowrap;transition:background .15s}
 .seg button.on{background:var(--card);box-shadow:var(--thumb);font-weight:600}
 @media (prefers-color-scheme:dark){.seg button.on{background:#636366}}
-.seg button.on.g{background:var(--acc);color:#fff}.seg button.on.a{background:var(--amber);color:#000}.seg button.on.r{background:var(--red);color:#fff}.seg button.on.b{background:var(--tint);color:#fff}
+.seg button.on.g{background:var(--acc);color:var(--on-g)}.seg button.on.a{background:var(--amber);color:#000}.seg button.on.r{background:var(--r-fill);color:var(--on-r)}.seg button.on.b{background:var(--tint-fill);color:#fff}
 .seg.full{display:flex}.seg.full button{flex:1}
 .tabs{margin-bottom:16px}
 .tabs button{padding:7px 18px;font-size:14px}
@@ -182,7 +183,7 @@ label.lb{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:12px;text-align:center}
 .cal .h{color:var(--faint);font-weight:600;padding-bottom:2px}
 .cal .d{aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-weight:500;color:var(--text);background:transparent}
-.cal .d.l1{background:var(--g-soft);color:var(--g-ink)}.cal .d.l2{background:var(--g-mid);color:var(--g-ink)}.cal .d.l3{background:var(--acc);color:#fff}
+.cal .d.l1{background:var(--g-soft);color:var(--g-ink)}.cal .d.l2{background:var(--g-mid);color:var(--g-ink)}.cal .d.l3{background:var(--acc);color:var(--on-g)}
 .cal .d.t{box-shadow:inset 0 0 0 2px var(--red);color:var(--red);font-weight:700}
 .formula{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:13px;background:var(--fill);border-radius:10px;padding:10px 12px;line-height:1.7}
 .formula b{color:var(--acc-ink)}.formula .bad{color:var(--r-ink);font-weight:700}
@@ -250,7 +251,7 @@ details summary:before{content:"›";display:inline-block;margin-right:6px;trans
 .modal{background:var(--card);border-radius:20px;box-shadow:var(--shadow-lg);width:min(660px,100%);max-height:90vh;overflow:auto;padding:24px;animation:rise .25s cubic-bezier(.2,.8,.2,1)}
 .mfoot{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--glass);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);color:var(--text);box-shadow:var(--shadow-lg);border:1px solid var(--glass-line);border-radius:99px;padding:11px 20px;font-weight:500;z-index:60;display:flex;align-items:center;gap:10px;animation:up .25s;max-width:calc(100% - 32px)}
-.toast .ck{width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-size:12px;flex:none}
+.toast .ck{width:22px;height:22px;border-radius:50%;background:var(--acc);color:var(--on-g);display:grid;place-items:center;font-size:12px;flex:none}
 .toast.err .ck{background:var(--red)}
 @keyframes up{from{opacity:0;transform:translate(-50%,10px)}}
 @keyframes fade{from{opacity:0}}@keyframes rise{from{opacity:0;transform:translateY(16px) scale(.98)}}
@@ -267,7 +268,7 @@ details summary:before{content:"›";display:inline-block;margin-right:6px;trans
 .lcard .rtag{display:inline-block;margin-top:12px;font-size:13px;font-weight:600;padding:0;border-radius:0;background:none!important;color:var(--tint)!important}
 .steps{margin-top:28px;display:flex;flex-direction:column;gap:12px;background:var(--card);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
 .steps .s{display:flex;gap:12px;align-items:flex-start;font-size:14px;line-height:1.55}
-.steps .n{width:24px;height:24px;border-radius:50%;background:var(--tint);color:#fff;display:grid;place-items:center;font-weight:600;font-size:13px;flex:none}
+.steps .n{width:24px;height:24px;border-radius:50%;background:var(--tint-fill);color:#fff;display:grid;place-items:center;font-weight:600;font-size:13px;flex:none}
 @media (max-width:900px){.login{grid-template-columns:1fr;padding:32px 16px;gap:28px}}
 
 /* ============ 학부모 리포트 ============ */
@@ -297,7 +298,7 @@ details summary:before{content:"›";display:inline-block;margin-right:6px;trans
   h2{font-size:26px}
   .rgrid{grid-template-columns:1fr}
 }
-@media (pointer:coarse){.btn,.chip,.navb{min-height:44px}.seg button{min-height:36px}.hwb{width:44px;height:44px}}
+@media (pointer:coarse){.btn,.btn.sm,.btn.icon,.chip,.navb{min-height:44px}.btn.icon{min-width:44px}.seg button{min-height:44px}.hwb{width:44px;height:44px}}
 </style>
 </head>
 <body>
@@ -990,7 +991,7 @@ function homePage(){
   const newTag=s=>{const a=adaptOf(s);return a?` <span class="bd b" style="padding:1px 7px">신규 ${a.week}주</span>`:''};
   const stat=(ringHtml,v,l)=>`<div class="stat">${ringHtml}<div><div class="sv">${v}</div><div class="sl">${l}</div></div></div>`;
   return `<div class="mb">${picker}</div>
-  ${asked.length?`<div class="card mb" style="border-color:var(--blue);background:var(--blue-soft);box-shadow:none"><div class="row"><span class="tic" style="color:var(--b-ink)">${ic('alert',18)}</span><b>원장님 확인 요청:</b> ${asked.map(s=>`<a onclick="nav('timeline',{sid:'${s.id}'})"><b>${esc(s.name)}</b></a>`).join(', ')}<span class="sp"></span><span class="small">챙긴 뒤 케어 기록을 남기면 원장님 화면에 "담임 챙기는 중"으로 바뀝니다</span></div></div>`:''}
+  ${asked.length?`<div class="card mb" style="background:var(--blue-soft);box-shadow:inset 0 0 0 1.5px var(--blue)"><div class="row"><span class="tic" style="color:var(--b-ink)">${ic('alert',18)}</span><b>원장님 확인 요청:</b> ${asked.map(s=>`<a onclick="nav('timeline',{sid:'${s.id}'})"><b>${esc(s.name)}</b></a>`).join(', ')}<span class="sp"></span><span class="small">챙긴 뒤 케어 기록을 남기면 원장님 화면에 "담임 챙기는 중"으로 바뀝니다</span></div></div>`:''}
   ${native?'':`<div class="grid g4 mb" style="gap:14px">
     ${stat(ring(p.pr,{size:52,color:p.delayed?COL.r:COL.g,center:''}),pct(p.pr),`진도 ${p.done}/${p.planned}회 · ${p.delayed?'<b style="color:var(--red)">지연</b>':'정상'}`)}
     ${stat(ring(remN?remDone/remN:0,{size:52,center:''}),remN+'명',`오늘 나머지 · 완료 ${remDone}`)}
@@ -1017,7 +1018,7 @@ function homePage(){
    </div>
 
    <div class="stack">
-    ${churn.length?`<div class="card" style="border-color:var(--red)"><div class="chead"><h3>그만둘 수 있는 신호</h3><span class="bd r">${churn.length}명</span></div>
+    ${churn.length?`<div class="card" style="box-shadow:inset 0 0 0 1.5px var(--red)"><div class="chead"><h3>그만둘 수 있는 신호</h3><span class="bd r">${churn.length}명</span></div>
       ${churn.map(({s,c})=>{const rs=DB.riskStatus[s.id]?.status;return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div class="row" style="flex-wrap:nowrap"><a onclick="nav('timeline',{sid:'${s.id}'})"><b>${esc(s.name)}</b></a>${newTag(s)}<span class="sp"></span>${rs&&rs!='new'?`<span class="bd ${RSTAT[rs][1]}">${RSTAT[rs][0]}</span>`:''}<span class="bd ${CHURN[c.level][1]}">${CHURN[c.level][0]} ${c.score}</span></div>
         <div class="row" style="gap:6px;margin-top:6px">${c.reasons.map(([t,k])=>`<span class="bd ${k}">${t}</span>`).join('')}</div>
         ${canW?`<div class="row" style="margin-top:8px;gap:6px"><button class="btn sm pri" onclick='openCare("${s.id}",{area:"attitude",type:"${c.reasons[0][0].startsWith('숙제')?'missing':c.reasons[0][0].startsWith('단어')?'drop':'behavior'}",action:"parent"})'>챙기기 기록</button><button class="btn sm" onclick="openConsult('${s.id}')">상담 준비</button><button class="btn sm" onclick="openNote('${s.id}')">조교 당부</button></div>`:''}</div>`}).join('')}</div>`:''}
@@ -1025,7 +1026,7 @@ function homePage(){
       ${results.length?results.map(r=>{const rec=DB.care.find(x=>x.id==r.rid);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div class="row" style="flex-wrap:nowrap"><b>${esc(r.st.name)}</b><span class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(rec.finding)}">${AREAS[rec.area]} · ${esc(rec.finding)}</span></div>
         <div class="row" style="margin-top:8px;flex-wrap:nowrap"><span class="small muted sp">${ACTIONS[rec.action]} · ${md(rec.follow)} 확인</span>${canW?`<div class="seg">${Object.entries(RESULTS).map(([k,l],i)=>`<button onclick="quickResult('${rec.id}','${k}')">${l}</button>`).join('')}</div><button class="btn sm ghost" onclick="openResult('${rec.id}')">자세히</button>`:''}</div></div>`}).join('')
         :'<div class="empty">밀린 결과 입력이 없습니다</div>'}</div>
-    ${sugg.length?`<div class="card" style="border-color:var(--amber)"><div class="chead"><h3>나머지 제안 · 확정 필요</h3><span class="bd a">${sugg.length}건</span></div>
+    ${sugg.length?`<div class="card" style="box-shadow:inset 0 0 0 1.5px var(--amber)"><div class="chead"><h3>나머지 제안 · 확정 필요</h3><span class="bd a">${sugg.length}건</span></div>
       <div class="small muted" style="margin-bottom:8px">조교 입력에서 자동 제안됨. 확정해야 강당 명단에 올라갑니다.</div>
       ${sugg.map(s=>`<label class="task" style="cursor:pointer"><input type="checkbox" ${s.sel?'checked':''} onchange="sugSel('${s.id}',this.checked)"> <b>${esc(stLabel(ST(s.sid)))}</b> ${esc(s.task)} <span class="sp"></span><span class="bd ${s.def?'r':'a'}">${esc(s.reason)}</span></label>`).join('')}
       ${ME.role=='teacher'?`<div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn" onclick="confirmSug('${c.id}',false)">모두 보류</button><button class="btn pri" onclick="confirmSug('${c.id}',true)">선택 확정 발행</button></div>`:''}</div>`:''}
@@ -1393,12 +1394,13 @@ function consultData(sid){
   // ③ 가정에 부탁할 것(학부모용 문장) / 담임 약속
   const ASK={'결석':'결석 이유를 편하게 말씀해 주시면 보충 일정을 함께 잡겠습니다','숙제':'숙제하는 시간을 정해 두시면 큰 도움이 됩니다','단어':'자기 전 10분만 단어를 같이 봐 주세요','나머지':'보충 학습으로 귀가가 조금 늦어질 수 있는 점 양해 부탁드립니다','지각':'출발 시간을 한 번만 확인해 주세요'};
   const PROMISE={'관찰':'이번 주에 따로 면담하고 다시 연락드리겠습니다','악화':'2주 동안 집중해서 챙기고 결과를 다시 알려 드리겠습니다'};
+  const SOFT='요즘 학원 생활을 한 번 더 꼼꼼히 살펴보고 다시 연락드릴게요'; // 걱정을 말하지 않을 때의 부드러운 약속
   const key=t=>Object.keys({...ASK,...PROMISE}).find(k=>t.startsWith(k));
   const suggest=[...new Set(ch.reasons.map(([t])=>ASK[key(t)]).filter(Boolean))];
   const promise=[...new Set(ch.reasons.map(([t])=>PROMISE[key(t)]).filter(Boolean))];
   if(!suggest.length)suggest.push('지금처럼 칭찬해 주시고, 이번 달 대표작을 함께 봐 주세요');
   // ④ 대화 예시 — 학부모에게 그대로 읽어도 되는 문장만 (내부 지표·원문 기록 제외)
-  const WORRY={'결석':'결석','숙제':'숙제','단어':'단어 점수','나머지':'보충 학습 마무리','지각':'등원 시간'};
+  const WORRY={'결석':'결석','숙제':'숙제','단어':'단어 점수','나머지':'보충 학습 마무리','지각':'등원 시간','악화':'최근 공부 흐름'};
   const worry=[...new Set(ch.reasons.map(([t])=>WORRY[key(t)]).filter(Boolean))];
   const praise=a&&b&&a>=b+1?`요즘 ${n}가 단어 시험을 꾸준히 잘 보고 있어요. 평균이 ${b.toFixed(1)}점에서 ${a.toFixed(1)}점으로 올랐습니다.`
     :good.some(r=>r.type=='positive')?`요즘 ${n}가 ${AREAS[good.find(r=>r.type=='positive').area]} 시간에 스스로 좋은 모습을 보여서 많이 칭찬했어요.`
@@ -1406,7 +1408,7 @@ function consultData(sid){
   const script=[`안녕하세요, ${n} 담임 ${US(st.homeroom).name}입니다. ${praise}`,
     worry.length?`다만 요즘 ${worry.join('·')} 쪽이 조금 마음이 쓰여서 먼저 연락드렸어요.${did.length?` 학원에서는 ${did.join(', ')}${ro(did.at(-1))} 챙기고 있습니다.`:''}`:'',
     worry.length?`집에서는 ${suggest[0]}`:`${suggest[0]}`,
-    ...promise].filter(Boolean).map(x=>/[.!?]$/.test(x)?x:x+'.');
+    ...(worry.length?promise:promise.length?[SOFT]:[])].filter(Boolean).map(x=>/[.!?]$/.test(x)?x:x+'.');
   return{st,sc,a,b,hr,care,lg,sh,pts,ch,start,must,did,suggest:suggest.concat(promise.map(p=>'(담임 약속) '+p)),script,weak};
 }
 function consultText(sid){
@@ -1652,6 +1654,16 @@ T('자동 채점 저장',()=>{ME=US('A1');const ss=DB.sessions.find(x=>x.pending
   openGrade(ss.id,sid);gTap(4);gTap(9);gTap(9);gTap(12);M.obs='sleepy';saveGrade();
   Object.values(DRAFT[ss.id]).forEach(d=>{if(d.score==='')d.score=25});saveEntry(ss.id);
   const x=DB.scores.find(z=>z.sess==ss.id&&z.sid==sid);return x.score==28&&x.wrong.join()=='4,12'&&DB.obs.some(o=>o.sid==sid&&o.tag=='sleepy')});
+// HIG 디자인 검토 수정
+const cssRules=()=>[...document.styleSheets].flatMap(ss=>{try{return[...ss.cssRules]}catch(e){return[]}});
+const probe=(cls,tag='button')=>{const w=document.createElement('div');w.className=cls.split('>')[0];const e=document.createElement(tag);e.className=cls.split('>')[1]||'';w.appendChild(e);document.body.appendChild(w);const st=getComputedStyle(e);const r={c:st.color,bg:st.backgroundColor,mh:st.minHeight};w.remove();return r};
+T('고대비 설정은 라이트·다크 따로',()=>cssRules().some(r=>r.media&&/prefers-contrast: more/.test(r.media.mediaText)&&/prefers-color-scheme: dark/.test(r.media.mediaText))&&!cssRules().some(r=>r.media&&r.media.mediaText=='(prefers-contrast: more)'));
+T('초록 선택 버튼 글자 검정',()=>probe('seg>on g').c=='rgb(0, 0, 0)');
+T('기본 버튼 파랑 진하게',()=>{const v=k=>{const e=document.createElement('i');e.style.color=`var(${k})`;document.body.appendChild(e);const c=getComputedStyle(e).color;e.remove();return c};
+  return probe('x>btn pri').bg==v('--tint-fill')&&probe('x>btn').c==v('--tint-ink')&&v('--tint-fill')!=v('--tint')});
+T('휴대폰 작은 버튼도 44px',()=>cssRules().some(r=>r.media&&/pointer: coarse/.test(r.media.mediaText)&&/\.btn\.sm/.test(r.cssText)&&/44px/.test(r.cssText)));
+T('이유 없는 약속 문장 없음',()=>DB.students.every(s=>{const t=consultData(s.id).script.join(' ');return !/2주 동안 집중해서|따로 면담하고/.test(t)||/마음이 쓰여서/.test(t)}));
+T('위험 카드 테두리 강조',()=>{const s=DB.students.find(x=>x.pattern=='churn');ME=US(s.homeroom);HOMECLS=s.cls;return homePage().includes('inset 0 0 0 1.5px var(--red)')});
 // 역할별 새 방향 검토 수정
 const careM=(sid,action)=>({kind:'care',sid,area:'attitude',type:'behavior',finding:'면담함',action,follow:addDays(TODAY,2),cand:true});
 T('확인 요청은 케어 기록으로 항상 진행',()=>{ME=US('T1');const s=DB.students.find(x=>x.homeroom=='T1'&&churnOf(x).level=='low');setRisk(s.id,'asked');M=careM(s.id,'oneone');saveCare();return DB.riskStatus[s.id].status=='acting'});
