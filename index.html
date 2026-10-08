@@ -981,19 +981,25 @@ function dashboard(){
 /* ============ 학교 정보 (NEIS 학사일정 · 학교알리미 학생 수) — 서버 함수 api/school.mjs ============ */
 // 키는 버셀 서버에만 있다. 화면은 /api/school?s=학교 로만 부른다. 파일로 열면(내 컴퓨터) 부를 수 없음.
 const REAL_SCHOOLS=['고잔초','와동초','선부초','단원중','와동중'];
-let SCH={};
+let SCH={},SCH_PENDING=false;
+// 학교 일정은 실제 오늘(한국 시각) 기준 — 데모 날짜(TODAY)는 학원 기록에만 쓴다
+let SCH_TODAY=new Date(Date.now()+9*36e5).toISOString().slice(0,10);
 function loadSchool(name){
   if(SCH[name])return SCH[name]; // 실패도 저장 — 다시 그릴 때마다 재요청하지 않게 (다시 시도는 retrySchool)
   if(!/^https?:$/.test(location.protocol))return SCH[name]={st:'local'}; // 파일·미리보기는 서버 함수 없음
   SCH[name]={st:'loading'};
-  fetch('api/school?s='+encodeURIComponent(name)+'&from='+TODAY).then(r=>r.ok?r.json():Promise.reject(r.status))
+  fetch('api/school?s='+encodeURIComponent(name)).then(r=>r.ok?r.json():Promise.reject(r.status))
     .then(d=>{SCH[name]={st:'ok',d};schoolChanged()}).catch(()=>{SCH[name]={st:'err'};schoolChanged()});
   return SCH[name];
 }
-function schoolChanged(){if(MF&&M.kind=='school')rm();else if(!MF&&ME&&R.page=='dashboard'&&DTAB=='brief')render()}
+// 여러 학교 응답이 몰려 와도 한 번만 다시 그림. 다른 창이 열려 있으면 닫힐 때 그림
+function schoolChanged(){if(SCH_PENDING)return;SCH_PENDING=true;requestAnimationFrame(()=>{SCH_PENDING=false;
+  if(MF&&M.kind=='school'){const f=document.activeElement?.getAttribute('onclick');rm();setTimeout(()=>(f&&$(`#modal [onclick="${f}"]`)||$('#modal .modal button'))?.focus())}
+  else if(MF)SCH_DIRTY=true;else if(ME&&R.page=='dashboard'&&DTAB=='brief')render()})}
+let SCH_DIRTY=false;
 function retrySchool(name){delete SCH[name];loadSchool(name);MF?rm():render()}
 const schoolLink=n=>REAL_SCHOOLS.includes(n)?`<a onclick="event.stopPropagation();openSchool('${n}')" title="${n} 학사일정·학생 수 보기">${esc(n)}</a>`:esc(n);
-const dday=d=>{const n=diff(d,TODAY);return n==0?'D-DAY':n>0?'D-'+n:'D+'+(-n)};
+const dday=d=>{const n=diff(d,SCH_TODAY);return n==0?'D-DAY':n>0?'D-'+n:'D+'+(-n)};
 const gradeNo=g=>+g.slice(1);
 const SCH_LOCAL=`<div class="callout"><span class="ci2">🔌</span><div>학교 정보는 배포 주소 <b>academy-records.vercel.app</b>에서만 불러옵니다. 내 컴퓨터에서 파일로 열면 보이지 않습니다.</div></div>`;
 function schoolState(x,name){return x.st=='local'?SCH_LOCAL:x.st=='loading'?'<div class="empty">학교 정보를 불러오는 중…</div>'
@@ -1008,22 +1014,22 @@ function schoolModal(){
     <div class="tblw"><table class="t"><tr><th>학년</th><th>학급</th><th>학생</th><th>우리 학원</th></tr>${info.byGrade.map(g=>`<tr><td>${g.grade}학년</td><td class="num">${g.classes??'–'}</td><td class="num">${g.students??'–'}</td><td class="num">${ours.filter(s=>gradeNo(s.grade)==g.grade).length}</td></tr>`).join('')}</table></div>
     <div class="small muted" style="margin-top:6px">학교알리미 ${info.year}년 공시 기준</div>`
     :`<div class="empty">학생 수 정보가 없습니다${errors?.info?` <span class="small">(${esc(errors.info)})</span>`:''}</div>`;
-  const up=(schedule||[]).filter(e=>e.date>=TODAY).slice(0,20);
+  const up=(schedule||[]).filter(e=>e.date>=SCH_TODAY).slice(0,20);
   const schH=schedule?(up.length?up.map(e=>`<div class="todo" style="cursor:default;min-height:40px"><span class="bd ${e.exam?'r':e.off?'n':'b'}" style="min-width:58px;justify-content:center">${dday(e.date)}</span><span class="small muted num" style="width:64px">${md(e.date)} (${WD[D(e.date).getDay()]})</span><span class="sp">${e.exam?`<b>${esc(e.event)}</b> <span class="bd r">시험</span>`:esc(e.event)}</span>${e.grades.length&&e.grades.length<(name.endsWith('초')?6:3)?`<span class="small muted">${e.grades.join('·')}학년</span>`:''}</div>`).join(''):'<div class="empty">앞으로 120일 안에 등록된 일정이 없습니다</div>')
-    :`<div class="empty">학사일정을 불러오지 못했어요${errors?.schedule?` <span class="small">(${esc(errors.schedule)})</span>`:''}</div>`;
+    :`<div class="empty">학사일정을 불러오지 못했어요${errors?.schedule?` <span class="small">(${esc(errors.schedule)})</span>`:''} <button class="btn sm" onclick="retrySchool('${name}')">다시 시도</button></div>`;
   return head+`<h4 style="margin:4px 0 10px">학생 수 · 학급 현황</h4>${infoH}<h4 style="margin:20px 0 6px">다가오는 학사일정</h4>${schH}
     <div class="small muted" style="margin-top:14px">출처: NEIS 교육정보 개방 포털 · 학교알리미</div>`;
 }
 // 원장 아침 브리핑: 45일 안의 학교 시험
 function schoolExams(){
   const names=REAL_SCHOOLS.filter(n=>DB.students.some(s=>s.school==n)),xs=names.map(n=>[n,loadSchool(n)]);
-  const g={};xs.forEach(([n,x])=>x.st=='ok'&&(x.d.schedule||[]).filter(e=>e.exam&&e.date>=TODAY&&diff(e.date,TODAY)<=45).forEach(e=>{const k=n+'|'+e.event;
+  const g={};xs.forEach(([n,x])=>x.st=='ok'&&(x.d.schedule||[]).filter(e=>e.exam&&e.date>=SCH_TODAY&&diff(e.date,SCH_TODAY)<=45).forEach(e=>{const k=n+'|'+e.event;
     if(!g[k])g[k]={n,event:e.event,from:e.date,to:e.date,grades:new Set()};g[k].to=e.date>g[k].to?e.date:g[k].to;g[k].from=e.date<g[k].from?e.date:g[k].from;e.grades.forEach(x=>g[k].grades.add(x))}));
   return{xs,list:Object.values(g).map(e=>({...e,ours:DB.students.filter(s=>s.school==e.n&&(!e.grades.size||e.grades.has(gradeNo(s.grade)))).length})).sort((a,b)=>a.from<b.from?-1:1)};
 }
 function schoolExamCard(){
   const {xs,list}=schoolExams(),local=xs.some(([,x])=>x.st=='local'),loading=xs.filter(([,x])=>x.st=='loading').length,err=xs.filter(([n,x])=>x.st=='err'||(x.st=='ok'&&!x.d.schedule));
-  return `<div class="card mb"><div class="chead"><h3>다가오는 학교 시험</h3><span class="small muted">45일 안 · 학교를 누르면 학사일정·학생 수</span></div>
+  return `<div class="card mb"><div class="chead"><h3>다가오는 학교 시험</h3><span class="small muted">실제 오늘(${md(SCH_TODAY)}) 기준 45일 안 · 학교를 누르면 학사일정·학생 수</span></div>
     ${local?SCH_LOCAL:list.length?list.map(e=>`<div class="todo" onclick="openSchool('${e.n}')"><span class="bd r" style="min-width:58px;justify-content:center">${dday(e.from)}</span><div class="sp"><div class="tt">${esc(e.n)} · ${esc(e.event)}</div><div class="ts">${md(e.from)}${e.to!=e.from?' ~ '+md(e.to):''} · 우리 학생 ${e.ours}명</div></div><span class="chev">›</span></div>`).join('')
       :loading?'<div class="empty">학교 일정을 불러오는 중…</div>':'<div class="empty">45일 안에 잡힌 학교 시험이 없습니다</div>'}
     ${!local&&err.length?`<div class="small muted" style="margin-top:8px">${err.map(([n])=>n).join('·')} 일정을 불러오지 못했어요 <button class="btn sm" onclick="${err.map(([n])=>`retrySchool('${n}')`).join(';')}">다시 시도</button></div>`:''}</div>`;
@@ -1260,7 +1266,7 @@ let M={},MF=null;
 let MRET=null;
 function showModal(fn){if(!MF)MRET=document.activeElement;MF=fn;rm()}
 function rm(){setTimeout(()=>a11yFix($('#modal')));$('#app').inert=!!MF;$('#modal').innerHTML=MF?`<div class="mbg" onclick="if(event.target==this)tryClose()"><div class="modal ${M.mcls||''}">${MF()}</div></div>`:''}
-function closeModal(){MF=null;rm();const r=MRET;MRET=null;if(r&&r.isConnected)r.focus?.()}
+function closeModal(){MF=null;rm();if(SCH_DIRTY){SCH_DIRTY=false;if(ME&&R.page=='dashboard'&&DTAB=='brief')render()}const r=MRET;MRET=null;if(r&&r.isConnected)r.focus?.()}
 const careSnap=()=>JSON.stringify([M.sid,M.area,M.type,(M.finding||'').trim(),M.action,M.follow,M.cand]);
 function modalDirty(){return M.kind=='care'&&careSnap()!==M._init}
 function tryClose(){if(modalDirty()&&!confirm('작성 중인 내용이 사라집니다. 닫을까요?'))return;closeModal()}
@@ -1890,7 +1896,7 @@ function selfTest(){
   const keep={DB,ME,dismissed,RS,DRAFT,M,DIRTY,HOMECLS,FILT:{...FILT},confirm:window.confirm};
   const fail=[];let pass=0;
   for(const [n,fn] of TESTS){
-    DB=buildData();ME=null;dismissed=new Set();RS={};DRAFT={};M={};DIRTY=false;MF=null;$('#modal').innerHTML='';FOLD=new Set();CHV='table';SIDE=true;DTAB='brief';SCH={};
+    DB=buildData();ME=null;dismissed=new Set();RS={};DRAFT={};M={};DIRTY=false;MF=null;$('#modal').innerHTML='';FOLD=new Set();CHV='table';SIDE=true;DTAB='brief';SCH={};SCH_TODAY=TODAY;SCH_DIRTY=false;
     try{fn()===true?pass++:fail.push(n)}catch(e){fail.push(`${n} (${e.message})`)}
     window.confirm=keep.confirm;
   }

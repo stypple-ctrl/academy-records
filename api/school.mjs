@@ -11,7 +11,7 @@ export const SCHOOLS = {
   와동중: { full: '와동중학교', neis: '7611022', kind: '03' },
 };
 const DAYS = 120;
-const EXAM = /고사|시험|평가/;
+const EXAM = /고사|시험|수행평가|학력평가/;
 
 const ymd = d => d.toISOString().slice(0, 10).replace(/-/g, '');
 const n = v => (v == null || v === '' ? null : Number(v));
@@ -19,13 +19,15 @@ const n = v => (v == null || v === '' ? null : Number(v));
 async function getJson(fetchFn, url) {
   const r = await fetchFn(url, { headers: { 'User-Agent': 'academy-records' } });
   if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
+  try { return await r.json(); } catch { throw new Error('응답 형식 오류'); } // 원문 일부가 오류 문구로 새지 않게
 }
+// 한국 날짜(서버 기준). 화면이 보낸 날짜는 쓰지 않는다 — 캐시 우회·호출 낭비 방지
+export const kstToday = (now = Date.now()) => new Date(now + 9 * 36e5).toISOString().slice(0, 10);
 
 async function schedule(fetchFn, key, sch, from) {
   const to = new Date(from.getTime() + DAYS * 864e5);
   const u = new URL('https://open.neis.go.kr/hub/SchoolSchedule');
-  Object.entries({ KEY: key, Type: 'json', pIndex: '1', pSize: '200', ATPT_OFCDC_SC_CODE: REGION.neis, SD_SCHUL_CODE: sch.neis, AA_FROM_YMD: ymd(from), AA_TO_YMD: ymd(to) })
+  Object.entries({ KEY: key, Type: 'json', pIndex: '1', pSize: '1000', ATPT_OFCDC_SC_CODE: REGION.neis, SD_SCHUL_CODE: sch.neis, AA_FROM_YMD: ymd(from), AA_TO_YMD: ymd(to) })
     .forEach(([k, v]) => u.searchParams.set(k, v));
   const d = await getJson(fetchFn, u);
   if (d.RESULT && d.RESULT.CODE === 'INFO-200') return []; // 해당 기간 일정 없음
@@ -33,7 +35,7 @@ async function schedule(fetchFn, key, sch, from) {
   if (!rows) throw new Error('NEIS ' + (d.RESULT?.CODE || 'no data'));
   const yn = ['ONE', 'TW', 'THREE', 'FR', 'FIV', 'SIX'];
   return rows
-    .filter(r => r.EVENT_NM && r.SBTR_DD_SC_NM !== '토요휴업일')
+    .filter(r => r.EVENT_NM && /^\d{8}$/.test(r.AA_YMD) && r.EVENT_NM.trim() !== '토요휴업일')
     .map(r => ({
       date: `${r.AA_YMD.slice(0, 4)}-${r.AA_YMD.slice(4, 6)}-${r.AA_YMD.slice(6, 8)}`,
       event: r.EVENT_NM.trim(),
@@ -46,11 +48,12 @@ async function schedule(fetchFn, key, sch, from) {
 
 async function info(fetchFn, key, sch, year) {
   for (const y of [year, year - 1]) {
+    const last = y === year - 1;
     const u = new URL('https://www.schoolinfo.go.kr/openApi.do');
     Object.entries({ apiKey: key, apiType: '09', sidoCode: REGION.sido, sggCode: REGION.sgg, schulKndCode: sch.kind, pbanYr: String(y) })
       .forEach(([k, v]) => u.searchParams.set(k, v));
     const d = await getJson(fetchFn, u);
-    if (d.resultCode !== 'success') throw new Error('학교알리미 ' + (d.resultCode || 'error'));
+    if (d.resultCode !== 'success') { if (last) throw new Error('학교알리미 ' + String(d.resultCode || 'error').slice(0, 20)); continue; } // 올해 공시 전이면 작년으로
     const r = (d.list || []).find(x => x.SCHUL_NM === sch.full);
     if (!r) continue;
     // 초등 1~6학년 = COL_?1~6, 중등 1~3학년 = COL_?9~11
@@ -64,10 +67,10 @@ async function info(fetchFn, key, sch, year) {
   return null;
 }
 
-export async function buildSchool(name, fromStr, fetchFn, env) {
+export async function buildSchool(name, today, fetchFn, env) {
   const sch = SCHOOLS[name];
   if (!sch) return { status: 404, body: { error: '연결된 학교가 아닙니다' } };
-  const from = /^\d{4}-\d{2}-\d{2}$/.test(fromStr || '') ? new Date(fromStr + 'T00:00:00Z') : new Date();
+  const from = new Date(today + 'T00:00:00Z');
   const [s, i] = await Promise.allSettled([
     env.NEIS_KEY ? schedule(fetchFn, env.NEIS_KEY, sch, from) : Promise.reject(new Error('NEIS 키 없음')),
     env.SCHOOLINFO_KEY ? info(fetchFn, env.SCHOOLINFO_KEY, sch, from.getUTCFullYear()) : Promise.reject(new Error('학교알리미 키 없음')),
@@ -77,7 +80,7 @@ export async function buildSchool(name, fromStr, fetchFn, env) {
   return {
     status: 200,
     body: {
-      name, full: sch.full,
+      name, full: sch.full, today,
       schedule: s.status === 'fulfilled' ? s.value : null,
       info: i.status === 'fulfilled' ? i.value : null,
       errors: { schedule: s.status === 'rejected' ? why(s) : null, info: i.status === 'rejected' ? why(i) : null },
@@ -87,7 +90,9 @@ export async function buildSchool(name, fromStr, fetchFn, env) {
 
 export default async function handler(req, res) {
   const q = req.query || {};
-  const { status, body } = await buildSchool(String(q.s || ''), String(q.from || ''), fetch, process.env);
+  // s 말고 다른 값이 붙으면 거절 (아무 값이나 붙여 캐시를 우회하는 호출 방지)
+  if (Object.keys(q).some(k => k !== 's')) { res.setHeader('Cache-Control', 'no-store'); return res.status(400).json({ error: '잘못된 요청' }); }
+  const { status, body } = await buildSchool(String(q.s || ''), kstToday(), fetch, process.env);
   res.setHeader('Cache-Control', status === 200 && !body.errors.schedule && !body.errors.info
     ? 's-maxage=21600, stale-while-revalidate=86400' : 'no-store');
   res.status(status).json(body);
