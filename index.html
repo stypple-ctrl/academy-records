@@ -485,7 +485,7 @@ function buildData(){
       if(sc&&!sc.passed)tasks.push(['단어 기준 미달',`단어 재시험 (${sc.score}/30)`]);
       db.hw.filter(h=>h.sess==s.id&&h.sid==st.id&&h.status=='X').forEach(h=>tasks.push(['숙제 미완',`${HW[h.item]} 숙제 완료`]));
       tasks.forEach(([reason,task])=>{
-        const t={id:nid('TK'),sid:st.id,issuedBy:st.homeroom,reason,task,src:s.date,from:null,status:'open',avail:s.date};
+        const t={id:nid('TK'),sid:st.id,sess:s.id,issuedBy:st.homeroom,reason,task,src:s.date,from:null,status:'open',avail:s.date};
         db.tickets.push(t);
         if(s.date==TODAY)return;
         let out=rnd()<0.85?'done':rnd()<0.5?'partial':'incomplete';
@@ -494,7 +494,7 @@ function buildData(){
         addLog(t,s.date,out,st,st.pattern=='fastpass'&&s.date>='2026-09-01');
         if(out!='done'){
           const nx=ss[i+1];
-          const ct={id:nid('TK'),sid:st.id,issuedBy:st.homeroom,reason:t.reason,task:t.task,src:t.src,from:t.id,status:'open',avail:nx?nx.date:addDays(s.date,1)};
+          const ct={id:nid('TK'),sid:st.id,sess:t.sess,issuedBy:st.homeroom,reason:t.reason,task:t.task,src:t.src,from:t.id,status:'open',avail:nx?nx.date:addDays(s.date,1)};
           db.tickets.push(ct);
           if(nx&&nx.date<TODAY)addLog(ct,nx.date,'done',st,false);
         }
@@ -1065,7 +1065,7 @@ function confirmSug(cid,issue){
   if(!issue){const n=DB.suggestions.filter(x=>x.cls==cid&&x.status=='pending').length;if(!confirm(`제안 ${n}건을 모두 보류할까요? 되돌릴 수 없습니다.`))return}
   DIRTY=true;
   let n=0;DB.suggestions.filter(x=>x.cls==cid&&x.status=='pending').forEach(s=>{
-    if(issue&&s.sel){DB.tickets.push({id:nid('TK'),sid:s.sid,issuedBy:ME.id,reason:s.reason,task:s.task,src:s.date,from:null,status:'open',avail:TODAY});s.status='issued';n++}else s.status='dismissed'});
+    if(issue&&s.sel){DB.tickets.push({id:nid('TK'),sid:s.sid,sess:s.sess,issuedBy:ME.id,reason:s.reason,task:s.task,src:s.date,from:null,status:'open',avail:TODAY});s.status='issued';n++}else s.status='dismissed'});
   toast(issue?`나머지 티켓 ${n}건 발행 · 강당 명단에 추가됨`:'제안 보류');render();
 }
 
@@ -1116,14 +1116,19 @@ function saveCare(){
   DB.care.push({id:nid('CR'),sid:M.sid,teacher:ME.id,area:M.area,type:M.type,finding:M.finding.trim(),action:M.action,action_note:'',follow:M.follow,result:null,result_note:'',cand:M.cand,created:TODAY});
   if(M.dkey)dismissed.add(M.dkey);
   // 처리 상태: 원장 확인 요청은 항상, 위험 학생은 새로·챙기는 중일 때 진행 (학부모 연락이면 '연락함')
-  if(prevRisk=='asked'||(prevLevel!='low'&&['new','acting',undefined].includes(prevRisk)))setRisk(M.sid,M.action=='parent'?'contacted':'acting');
+  const rec=DB.care.at(-1);
+  if(prevRisk=='asked'||(prevLevel!='low'&&['new','acting',undefined].includes(prevRisk))){setRisk(M.sid,M.action=='parent'?'contacted':'acting');rec.riskUndo={prev:prevRisk??null,set:DB.riskStatus[M.sid].status}}
+  if(M.dkey)rec.dkey=M.dkey;
   closeModal();toast(`케어 기록 저장 · ${md(M.follow)}에 결과 확인 알림`);render();
 }
 function deleteCare(rid){
   const r=DB.care.find(x=>x.id==rid);
   if(!r||r.teacher!=ME.id||r.created!=TODAY||r.result){toast('오늘 쓴 내 기록 중 결과를 입력하지 않은 것만 삭제할 수 있습니다',1);return false}
   if(!confirm('이 케어 기록을 삭제할까요?'))return false;
-  DB.care=DB.care.filter(x=>x.id!=rid);DIRTY=true;toast('삭제됨');render();return true;
+  DB.care=DB.care.filter(x=>x.id!=rid);
+  if(r.riskUndo&&DB.riskStatus[r.sid]?.status==r.riskUndo.set){if(r.riskUndo.prev)DB.riskStatus[r.sid]={status:r.riskUndo.prev,at:TODAY};else delete DB.riskStatus[r.sid]}
+  if(r.dkey)dismissed.delete(r.dkey);
+  DIRTY=true;toast('삭제됨 · 처리 상태도 되돌렸습니다');render();return true;
 }
 function openResult(rid){M={kind:'result',rid,result:null,note:''};showModal(resultModal)}
 function resultModal(){
@@ -1228,9 +1233,10 @@ function allHw(ss,it){DIRTY=true;Object.values(DRAFT[ss]).forEach(d=>{if(d.att!=
 // 4-3 점수·숙제를 고치면 이 수업에서 나온, 아직 처리 안 한 티켓·제안을 새 결과에 맞춤
 function syncTickets(sid,sess,ssid,want){
   let n=0;const w=new Set(want),retest=want.find(t=>t.startsWith('단어 재시험'));
-  DB.tickets.filter(t=>t.sid==sid&&t.src==sess.date&&!t.from&&t.status=='open'&&!DB.logs.some(l=>l.ticket==t.id)).forEach(t=>{
-    if(t.task.startsWith('단어 재시험')){if(retest){if(t.task!=retest){t.task=retest;n++}}else{t.status='canceled';n++}}
-    else if(!w.has(t.task)){t.status='canceled';n++}});
+  // 담임이 직접 발행한 티켓(sess 없음)은 건드리지 않음. 이월된 티켓도 같은 수업에서 나왔으면 함께 맞춤
+  DB.tickets.filter(t=>t.sid==sid&&t.sess==ssid&&t.status=='open'&&!DB.logs.some(l=>l.ticket==t.id)).forEach(t=>{
+    if(t.task.startsWith('단어 재시험')){if(retest){if(t.task!=retest){t.task=retest;n++}}else{t.status='canceled';t.canceledBy='sync';n++}}
+    else if(!w.has(t.task)){t.status='canceled';t.canceledBy='sync';n++}});
   DB.suggestions.filter(x=>x.sid==sid&&x.sess==ssid&&x.status=='pending'&&!w.has(x.task)).forEach(x=>{x.status='dismissed';n++});
   return n;
 }
@@ -1252,7 +1258,8 @@ function saveEntry(ssid){
       if(v=='X')sug.push(['숙제 미완',`${HW[it]} 숙제 완료`,true]);if(v=='△')sug.push(['숙제 부분',`${HW[it]} 숙제 마무리`,false])});
     fixed+=syncTickets(sid,sess,ssid,sug.map(x=>x[1]));
     sug.forEach(([reason,task,def])=>{
-      if(DB.tickets.some(t=>t.sid==sid&&t.src==sess.date&&t.task==task&&t.status!='canceled')||DB.suggestions.some(x=>x.sid==sid&&x.sess==ssid&&x.task==task&&x.status=='pending'))return;
+      const same=x=>x==task||(task.startsWith('단어 재시험')&&x.startsWith('단어 재시험'));
+      if(DB.tickets.some(t=>t.sid==sid&&(t.sess==ssid||(!t.sess&&t.src==sess.date))&&same(t.task)&&!(t.status=='canceled'&&t.canceledBy=='sync'))||DB.suggestions.some(x=>x.sid==sid&&x.sess==ssid&&x.task==task&&x.status=='pending'))return;
       DB.suggestions.push({id:nid('SG'),cls:sess.cls,sess:ssid,date:sess.date,sid,reason,task,def,sel:def,status:'pending'});n++});
   });
   sess.pending=false;delete DRAFT[ssid];
@@ -1350,7 +1357,7 @@ function saveRem(sid){
   ts.forEach(t=>{
     const o=r.outs[t.id];t.status=o;
     DB.logs.push({id:nid('LG'),ticket:t.id,sid,task:t.task,date:TODAY,assistant:ME.id,checkIn:r.in,c20:r.c20==null?null:+r.c20,c40:r.c40==null?null:+r.c40,outcome:o,pass:r.pass||'60',att:r.att,extra:r.extra||null,extraDone:!!r.extraDone,memo:r.memo||''});
-    if(o!='done')DB.tickets.push({id:nid('TK'),sid,issuedBy:t.issuedBy,reason:t.reason,task:t.task,src:t.src,from:t.id,status:'open',avail:addDays(TODAY,1)});
+    if(o!='done')DB.tickets.push({id:nid('TK'),sid,sess:t.sess,issuedBy:t.issuedBy,reason:t.reason,task:t.task,src:t.src,from:t.id,status:'open',avail:addDays(TODAY,1)});
   });
   delete RS[sid];
   const inc=termInc(sid),nc=ts.filter(t=>t.status!='done').length;
@@ -1372,7 +1379,7 @@ function cancelTicket(id){
   if(DB.logs.some(l=>l.ticket==id)){toast('이미 처리된 과제는 취소할 수 없습니다',1);return false}
   if(!(ME.role=='director'||(ME.role=='teacher'&&ST(t.sid).homeroom==ME.id))){toast('담임 또는 원장만 취소할 수 있습니다',1);return false}
   if(!confirm(`${ST(t.sid).name} · ${t.task} 과제를 취소할까요?`))return false;
-  t.status='canceled';DIRTY=true;toast('과제 취소됨');render();return true;
+  t.status='canceled';t.canceledBy=ME.id;DIRTY=true;toast('과제 취소됨');render();return true;
 }
 
 /* ============ 학생 검색 / 타임라인 (F7) ============ */
@@ -1732,6 +1739,22 @@ T('점수 정정 시 재시험 티켓 취소',()=>{ME=US('A1');const ss=DB.sessi
 T('처리된 티켓은 취소 불가',()=>{const t=DB.tickets.find(x=>DB.logs.some(l=>l.ticket==x.id));ME=US('D1');return cancelTicket(t.id)===false&&t.status!='canceled'});
 T('케어 수정 이력',()=>{ME=US('T1');const r=DB.care.find(x=>x.teacher=='T1');const n=DB.care.length,old=r.finding;openCare(r.sid,{},r.id);document.getElementById('mf').value='수정본';saveCare();return r.finding=='수정본'&&r.history.length==1&&r.history[0].before.finding==old&&DB.care.length==n});
 T('지난 기록 삭제 불가',()=>{ME=US('T1');const r=DB.care.find(x=>x.teacher=='T1'&&x.created<TODAY);const n=DB.care.length;return deleteCare(r.id)===false&&DB.care.length==n});
+// 4단계 검토 수정
+const prepSess=(score)=>{ME=US('A1');const ss=DB.sessions.find(s=>s.pending);const sid=studentsOf(ss.cls)[0].id;ENT.cls=ss.cls;entryPage();
+  Object.values(DRAFT[ss.id]).forEach(d=>{d.score=25;Object.keys(d.hw).forEach(k=>d.hw[k]='O')});DRAFT[ss.id][sid].score=score;return{ss,sid}};
+const resave=(ss,sid,score)=>{ME=US('A1');ENT.cls=ss.cls;entryPage();DRAFT[ss.id][sid].score=score;saveEntry(ss.id)};
+T('점수 저장이 담임 직접 발행 티켓을 건드리지 않음',()=>{window.confirm=()=>true;const{ss,sid}=prepSess(25);ME=US(CL(ss.cls).teacher);M={kind:'ticket',sid,reason:'교사 지정',task:'문법 오답 정리'};saveTicket();
+  const t=DB.tickets.at(-1);ME=US('A1');saveEntry(ss.id);return t.status=='open'});
+T('담임이 취소한 티켓은 다시 제안 안 됨',()=>{window.confirm=()=>true;const{ss,sid}=prepSess(20);saveEntry(ss.id);ME=US(CL(ss.cls).teacher);confirmSug(ss.cls,true);
+  const t=DB.tickets.find(x=>x.sid==sid&&x.src==TODAY&&x.task.startsWith('단어 재시험'));cancelTicket(t.id);resave(ss,sid,20);
+  return t.status=='canceled'&&!DB.suggestions.some(x=>x.sid==sid&&x.status=='pending'&&x.task.startsWith('단어 재시험'))});
+T('처리 후 점수 정정해도 재시험 중복 없음',()=>{window.confirm=()=>true;const{ss,sid}=prepSess(20);saveEntry(ss.id);ME=US(CL(ss.cls).teacher);confirmSug(ss.cls,true);
+  ME=US('A1');const ts=DB.tickets.filter(t=>t.sid==sid&&t.status=='open'&&t.avail<=TODAY);RS[sid]={in:'17:00',c20:'1',c40:'2',pass:'60',att:'normal',outs:Object.fromEntries(ts.map(t=>[t.id,'incomplete']))};saveRem(sid);
+  resave(ss,sid,22);const a=!DB.suggestions.some(x=>x.sid==sid&&x.status=='pending'&&x.task.startsWith('단어 재시험'));
+  resave(ss,sid,26);const b=!DB.tickets.some(t=>t.sid==sid&&t.status=='open'&&t.task.startsWith('단어 재시험')&&t.src==TODAY);return a&&b});
+T('케어 삭제 시 처리 상태 되돌림',()=>{window.confirm=()=>true;const s=DB.students.find(x=>x.pattern=='churn');ME=US(s.homeroom);const before=DB.riskStatus[s.id]?.status;
+  M={kind:'care',sid:s.id,area:'attitude',type:'behavior',finding:'통화',action:'parent',follow:addDays(TODAY,2),cand:true};saveCare();const mid=DB.riskStatus[s.id]?.status;deleteCare(DB.care.at(-1).id);
+  return mid=='contacted'&&DB.riskStatus[s.id]?.status===before});
 // 3단계
 T('급락 학생은 퇴원 위험에도 신호',()=>{const s=DB.students.find(x=>x.pattern=='drop');const d=wordDrop(s.id);const r=churnOf(s).reasons.find(([t])=>t.startsWith('급락'));const it=careItems(s.cls).find(i=>i.st.id==s.id);
   return !!d&&!!r&&r[0].includes(d.pct+'%')&&[it.top,...it.rest].some(x=>x.text.includes(d.pct+'%'))});
