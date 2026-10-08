@@ -1491,7 +1491,7 @@ function aiDraft(b){
   good.slice(0,2).forEach(r=>s.push(parentPhrase(r)));
   if(b.homework.rate!=null)s.push(`숙제 제출률은 ${pct(b.homework.rate)}입니다.`);
   if(b.showcase.this)s.push(`이번 달 대표작(${b.showcase.this.kind=='essay'?'에세이':'스피킹'})에서는 ${b.showcase.this.comment}.`);
-  s.push(`다음 달에는 ${a!=null&&a<24?'단어 통과 기준을 안정적으로 넘는 것':'지금의 좋은 흐름을 유지하며 독해·문법 응용'}을 목표로 지도하겠습니다.`);
+  s.push(`다음 달에는 ${a!=null&&!isPassScore(a)?'단어 통과 기준을 안정적으로 넘는 것':'지금의 좋은 흐름을 유지하며 독해·문법 응용'}을 목표로 지도하겠습니다.`);
   return `${n} 학생 ${+b.month.slice(5)}월 리포트\n\n`+s.join(' ');
 }
 const ACADEMY_NAME='OO영어학원';
@@ -1673,8 +1673,10 @@ T('자동 채점 저장',()=>{ME=US('A1');const ss=DB.sessions.find(x=>x.pending
 // 3단계
 T('급락 학생은 퇴원 위험에도 신호',()=>{const s=DB.students.find(x=>x.pattern=='drop');const d=wordDrop(s.id);const r=churnOf(s).reasons.find(([t])=>t.startsWith('급락'));const it=careItems(s.cls).find(i=>i.st.id==s.id);
   return !!d&&!!r&&r[0].includes(d.pct+'%')&&[it.top,...it.rest].some(x=>x.text.includes(d.pct+'%'))});
-T('기준 변경 즉시 반영',()=>{DB.settings.pass=26;const sc=DB.scores.find(x=>x.score==25);ME=US('D1');const tl=timelinePage({sid:sc.sid});const b=bundle(sc.sid,sc.date.slice(0,7));
-  const exp=DB.scores.filter(x=>x.sid==sc.sid&&x.date.startsWith(sc.date.slice(0,7))&&x.score>=26).length;DB.settings.pass=24;return !isPassScore(25)===false&&b.word.pass==exp&&tl.includes('25</b>/30 <span class="bd r">미달')});
+T('기준 변경 즉시 반영',()=>{DB.settings.pass=26;try{const sc=DB.scores.find(x=>x.score==25);ME=US('D1');const m=sc.date.slice(0,7);
+  const exp=DB.scores.filter(x=>x.sid==sc.sid&&x.date.startsWith(m)&&x.score>=26).length,b=bundle(sc.sid,m);
+  const draft=aiDraft({...b,word:{...b.word,avg:25,prev:24}});
+  return !isPassScore(25)&&b.word.pass==exp&&timelinePage({sid:sc.sid}).includes('25</b>/30 <span class="bd r">미달')&&draft.includes('통과 기준')}finally{DB.settings.pass=24}});
 T('조교는 오늘 수업 반만',()=>{ME=US('A1');const c=entryClasses();return c.length>0&&c.every(x=>isClassDay(x,TODAY))});
 T('조교 지난 점수 못 봄',()=>{ME=US('A1');ENT.cls='C11';return !entryPage().includes('class="scin"')});
 // HIG 디자인 검토 수정
