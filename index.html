@@ -13,7 +13,7 @@
   color-scheme:light dark;
   --bg:#ffffff;--side:#f7f7f5;--card:#ffffff;--surf:#f7f7f5;--fill:rgba(55,53,47,.06);--fill2:rgba(55,53,47,.11);--fill-strong:#d3d1cb;
   --line:rgba(55,53,47,.12);--line2:rgba(55,53,47,.2);
-  --text:#37352f;--muted:#64635e;--faint:#91908b;
+  --text:#37352f;--muted:#64635e;--faint:#787774;
   --tint:#2383e2;--tint-soft:rgba(35,131,226,.12);--tint-ink:#1a65b5;--tint-fill:#1f6fc5;--on-g:#fff;--r-fill:#c4433e;--on-r:#fff;
   --acc:#3d7a58;--acc2:#3d7a58;--acc-soft:#dbeddb;--acc-ink:#2a5e40;--g-soft:#dbeddb;--g-mid:#b4d8bd;--g-ink:#1c3829;
   --red:#d44c47;--red-soft:#ffe2dd;--r-ink:#a8322d;
@@ -328,7 +328,7 @@ details summary:before{content:"▸";display:inline-block;width:1em;margin-right
 .pv-story .flow .st{background:var(--card)}
 @media print{
   :root{color-scheme:light}
-  body{background:#fff;color:#000}.side,.topbar,.phead,.noprint,#toast,#modal{display:none!important}
+  body{background:#fff;color:#000}.side,.topbar,.fold,.noprint,#toast,#modal{display:none!important}.card.folded>:not(.chead){display:revert!important}
   .shell{display:block}.main{padding:0}.pv{box-shadow:none;border:1px solid #ddd;background:#fff}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
@@ -835,7 +835,7 @@ const NAV={
 const FIRST={director:'dashboard',teacher:'home',native_teacher:'home',assistant:'remedial'};
 const TITLE={parent:'학부모 리포트 미리보기',dashboard:'원장 대시보드',home:'오늘 챙길 학생',entry:'점수 · 숙제 · 출결 입력',remedial:'강당 나머지 학습',students:'학생',timeline:'학생 타임라인',report:'월말 개별 리포트',admin:'관리 · 설정',showcase:'대표작 선택'};
 function nav(page,p={}){R={page,p};render();window.scrollTo(0,0)}
-function login(id){ME=US(id);dismissed=new Set();ENT.cls=null;nav(FIRST[ME.role])}
+function login(id){ME=US(id);dismissed=new Set();ENT.cls=null;CHV='table';SIDE=true;nav(FIRST[ME.role])}
 function logout(){ME=null;render()}
 function resetDemo(){if(!confirm('입력한 내용이 모두 지워집니다. 초기화할까요?'))return;DIRTY=false;DB=buildData();dismissed=new Set();RS={};DRAFT={};toast('데모 데이터 초기화됨')}
 
@@ -848,7 +848,7 @@ const PICON={parent:'💌',dashboard:'📊',home:'🏠',entry:'✏️',remedial:
 let SIDE=true,FOLD=new Set();
 function toggleSide(){SIDE=!SIDE;render()}
 // 토글 블록: 카드 제목 왼쪽 ▸ 로 접기/펴기 (같은 화면에 다시 와도 유지)
-function foldKey(h){return R.page+'|'+(R.page=='dashboard'?DTAB+'|':'')+h.textContent.replace(/[\d.,%]+/g,'').trim()}
+function foldKey(h){return ME.id+'|'+R.page+(R.p?.sid?'.'+R.p.sid:'')+'|'+(R.page=='dashboard'?DTAB+'|':'')+h.textContent.replace(/[\d.,]+\s*(명|건|개|%)/g,'').trim()}
 function foldify(root){root.querySelectorAll('.card>.chead').forEach(ch=>{const h=ch.querySelector('h3');if(!h)return;const k=foldKey(h),card=ch.parentElement,shut=FOLD.has(k);
   const b=document.createElement('button');b.className='fold';b.textContent='▸';b.dataset.k=k;b.setAttribute('onclick','toggleFold(this)');b.setAttribute('aria-expanded',String(!shut));b.setAttribute('aria-label',(shut?'펴기: ':'접기: ')+h.textContent);
   ch.prepend(b);card.classList.toggle('folded',shut)})}
@@ -856,9 +856,10 @@ function toggleFold(b){const k=b.dataset.k,shut=!FOLD.has(k);shut?FOLD.add(k):FO
 // 빠른 찾기 (⌘K / Ctrl+K): 내가 볼 수 있는 학생만, 조교는 없음
 function findList(q){q=q.trim();if(!ME||ME.role=='assistant')return[];const L=myStudents();return(q?L.filter(s=>(s.name+' '+s.school+' '+CL(s.cls).name+' '+s.grade).includes(q)):L).slice(0,8)}
 function findRows(q){const L=findList(q);return L.length?L.map(s=>`<button class="fr" onclick="goFind('${s.id}')">${avatar(s.name)}<span class="sp"><b>${esc(s.name)}</b> <span class="small muted">${s.grade} · ${esc(s.school)} · ${esc(CL(s.cls).name)}</span></span><span class="small muted">↵</span></button>`).join(''):'<div class="empty">찾는 학생이 없습니다</div>'}
-function openFind(){if(!ME||ME.role=='assistant')return;M={kind:'find',mcls:'findm'};showModal(()=>`<div class="fin">${ic('search')}<input id="findq" data-nd placeholder="학생 이름 · 학교 · 반으로 찾기" aria-label="학생 찾기" oninput="$('#findl').innerHTML=findRows(this.value);a11yFix($('#findl'))" onkeydown="if(event.key=='Enter'){const f=findList(this.value)[0];if(f)goFind(f.id)}"></div><div class="fl" id="findl">${findRows('')}</div><div class="ff">Enter 첫 번째 학생 열기 · Esc 닫기</div>`);setTimeout(()=>$('#findq')?.focus())}
+function openFind(){if(!ME||ME.role=='assistant'||(MF&&M.kind!='find'))return;M={kind:'find',mcls:'findm'};showModal(()=>`<div class="fin">${ic('search')}<input id="findq" data-nd placeholder="학생 이름 · 학교 · 반으로 찾기" aria-label="학생 찾기" oninput="$('#findl').innerHTML=findRows(this.value);a11yFix($('#findl'))" onkeydown="if(event.key=='Enter'&&!event.isComposing){const f=findList(this.value)[0];if(f)goFind(f.id)}"></div><div class="fl" id="findl">${findRows('')}</div><div class="ff">Enter 첫 번째 학생 열기 · Esc 닫기</div>`);setTimeout(()=>$('#findq')?.focus())}
 function goFind(sid){closeModal();nav('timeline',{sid})}
-document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()=='k'&&ME&&ME.role!='assistant'){e.preventDefault();openFind()}});
+const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent),KEYK=MAC?'⌘K':'Ctrl K';
+document.addEventListener('keydown',e=>{if((MAC?e.metaKey:e.ctrlKey)&&e.key.toLowerCase()=='k'&&ME&&ME.role!='assistant'){e.preventDefault();if(MF&&M.kind!='find')return;openFind()}});
 function render(){
   const app=$('#app');
   if(!ME){app.innerHTML=loginView()+dataToggle();a11yFix(app);return}
@@ -868,7 +869,7 @@ function render(){
   const crumbT=TITLE[R.page]||'',canFind=ME.role!='assistant';
   app.innerHTML=`<div class="shell ${SIDE?'':'noside'}"><aside class="side">
     <div class="ws"><span class="mk">학</span><div class="wt"><b>학원 기록관리 <span class="bd b" style="font-size:11px;padding:0 5px">DEMO</span></b><span>${ROLE[ME.role]} · ${esc(ME.name)}</span></div><button class="btn icon ghost sidex" onclick="toggleSide()" aria-label="사이드바 접기" title="사이드바 접기">«</button></div>
-    ${canFind?`<button class="navb" onclick="openFind()">${ic('search')}검색<kbd>⌘K</kbd></button>`:''}
+    ${canFind?`<button class="navb" onclick="openFind()">${ic('search')}검색<kbd>${KEYK}</kbd></button>`:''}
     <div class="sec">메뉴</div>
     ${NAV[ME.role].map(([k,l,i])=>`<button class="navb ${R.page==k||(R.page=='timeline'&&k=='students')||(R.page=='parent'&&k=='report')?'on':''}" onclick="nav('${k}')">${ic(i)}${l}</button>`).join('')}
     <div class="grow"></div>
@@ -1205,9 +1206,10 @@ function confirmSug(cid,issue){
 
 /* ============ modals ============ */
 let M={},MF=null;
-function showModal(fn){MF=fn;rm()}
-function rm(){setTimeout(()=>a11yFix($('#modal')));$('#modal').innerHTML=MF?`<div class="mbg" onclick="if(event.target==this)tryClose()"><div class="modal ${M.mcls||''}">${MF()}</div></div>`:''}
-function closeModal(){MF=null;rm()}
+let MRET=null;
+function showModal(fn){if(!MF)MRET=document.activeElement;MF=fn;rm()}
+function rm(){setTimeout(()=>a11yFix($('#modal')));$('#app').inert=!!MF;$('#modal').innerHTML=MF?`<div class="mbg" onclick="if(event.target==this)tryClose()"><div class="modal ${M.mcls||''}">${MF()}</div></div>`:''}
+function closeModal(){MF=null;rm();const r=MRET;MRET=null;if(r&&r.isConnected)r.focus?.()}
 const careSnap=()=>JSON.stringify([M.sid,M.area,M.type,(M.finding||'').trim(),M.action,M.follow,M.cand]);
 function modalDirty(){return M.kind=='care'&&careSnap()!==M._init}
 function tryClose(){if(modalDirty()&&!confirm('작성 중인 내용이 사라집니다. 닫을까요?'))return;closeModal()}
@@ -1924,6 +1926,7 @@ T('보드 보기: 학생 수 같고 상태별 칸',()=>{ME=US('D1');const s=DB.s
   CHV='table';render();const t=document.querySelector('[data-board]')==null;ME=null;render();return n==ch&&inCol&&t});
 T('사이드바 접기·열기',()=>{ME=US('D1');R={page:'dashboard',p:{}};render();document.querySelector('.sidex').click();const a=document.querySelector('.shell.noside')&&cssRules().some(r=>!r.media&&r.selectorText=='.shell.noside .side'&&r.style.display=='none');
   document.querySelector('.sideopen').click();const b=!document.querySelector('.shell.noside');ME=null;render();return !!a&&b});
+T('⌘K는 작성 중인 창을 지우지 않음',()=>{ME=US('T1');R={page:'home',p:{}};render();openCare('S1',{area:'word'});const k=new KeyboardEvent('keydown',{key:'k',metaKey:MAC,ctrlKey:!MAC,bubbles:true});document.dispatchEvent(k);const ok=M.kind=='care'&&!$('#modal .findm');closeModal();ME=null;render();return ok});
 T('입력 창 바깥은 버튼 아님·Esc로 닫힘',()=>{ME=US('T1');openCare('S1',{});rm();a11yFix($('#modal'));const bg=$('#modal .mbg');const ok1=bg&&!bg.hasAttribute('role')&&$('#modal .modal').getAttribute('role')=='dialog';document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));return ok1&&!MF});
 T('토글도 키보드 초점',()=>{ME=US('D1');R={page:'admin',p:{}};ADM='extra';render();const i=document.querySelector('.toggle input');ADM='settings';const ok=i&&getComputedStyle(i).display!='none';ME=null;render();return ok});
 T('확인함 버튼에 글자',()=>{ME=US('T1');HOMECLS='C11';return /onclick="dismiss\([^"]*\)"[^>]*>[^<]*(<svg[\s\S]*?<\/svg>)?\s*확인함/.test(homePage())});
