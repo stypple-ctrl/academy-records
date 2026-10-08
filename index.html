@@ -943,14 +943,16 @@ function dashOverview(set,studs,start,careP,teachers){
       ${lineChart(wpts,{min:18,max:30,ref:DB.settings.pass,refLabel:`통과 기준 ${DB.settings.pass}`})}</div>
     <div class="card"><div class="chead"><h3>케어 기록 흐름</h3><span class="small muted">발견 → 조치 → 결과</span></div>
       <div class="flowbig"><div class="nd"><div class="v">${flowN.f}</div><div class="t">발견</div></div><span class="arw">›</span><div class="nd"><div class="v">${flowN.a}</div><div class="t">조치</div></div><span class="arw">›</span><div class="nd"><div class="v">${flowN.r}</div><div class="t">결과 입력</div></div><span class="arw">›</span><div class="nd" style="background:var(--acc-soft)"><div class="v" style="color:var(--acc-ink)">${flowN.i}</div><div class="t">개선</div></div></div>
-      <div class="row" style="margin-top:16px;gap:18px;flex-wrap:nowrap">${donut(resSeg,{size:112,center:careP.length,sub:'케어 기록'})}<div class="sp">${legend(resSeg)}</div></div></div>
+      <div class="row" style="margin-top:16px;gap:18px;flex-wrap:nowrap">${donut(resSeg,{size:112,center:careP.length,sub:'케어 기록'})}<div class="sp">${legend(resSeg)}</div></div>
+      ${(()=>{const ts=Object.entries(TYPES).map(([k,l],i)=>({l,v:careP.filter(r=>r.type==k).length,c:['var(--acc)','var(--tint)','var(--amber)','var(--blue)','var(--red)','var(--fill-strong)'][i]}));return `<div data-types style="margin-top:14px"><div class="small muted b" style="margin-bottom:6px">발견 유형</div>${hbar(ts)}<div style="margin-top:8px">${legend(ts)}</div></div>`})()}</div>
   </div>
   <div class="grid g3">
     <div class="card"><div class="chead"><h3>나머지 결과 · 14일</h3></div>${remDays.length?bars(remDays):'<div class="empty">기록 없음</div>'}
       <div class="legend" style="margin-top:10px"><span><i style="background:${COL.g}"></i>완료</span><span><i style="background:${COL.a}"></i>부분</span><span><i style="background:${COL.r}"></i>미완</span></div></div>
     <div class="card"><div class="chead"><h3>교사별 결과 입력률</h3></div>
       ${bars(tStats.map(x=>({l:x.t.name,v:x.rate??0,c:x.rate==null?COL.n:x.rate<80?COL.a:COL.g,na:x.rate==null})),{max:100,fmtv:(v,i)=>i.na?'–':v+'%'})}
-      <div class="small muted" style="margin-top:10px">확인일 지난 기록 중 결과를 입력한 비율 · 목표 80%</div></div>
+      <div class="small muted" style="margin-top:10px">확인일 지난 기록 중 결과를 입력한 비율 · 목표 80%</div>
+      <div class="small" data-tstats style="margin-top:8px;line-height:1.7">${tStats.map(x=>`${x.t.name}: 미입력 ${x.pend} · 공백 ${x.gap}명`).join('<br>')}</div></div>
     <div class="card"><div class="chead"><h3>${+CALM.slice(5)}월 기록 캘린더</h3><button class="btn icon ghost" onclick="CALM=prevMonth(CALM);render()">‹</button><button class="btn icon ghost" ${CALM>=TODAY.slice(0,7)?'disabled':''} onclick="CALM=nextMonth(CALM);render()">›</button></div>${heatCal(CALM,calCounts)}
       <div class="legend" style="margin-top:10px"><span><i style="background:var(--surf);border:1px solid var(--line)"></i>0</span><span><i style="background:var(--g-soft)"></i>1–2</span><span><i style="background:var(--g-mid)"></i>3–5</span><span><i style="background:var(--acc)"></i>6+</span></div></div>
   </div>`;
@@ -1019,6 +1021,7 @@ function homePage(){
   const memoCard=ME.role=='teacher'?`<div class="card mb" style="padding:14px 16px"><div class="row" style="flex-wrap:nowrap"><b style="white-space:nowrap">오늘 메모</b>
     <select id="memoSid" data-nd style="width:auto;max-width:150px"><option value="">학생 (선택)</option>${myStudents().map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
     <input id="memoText" data-nd placeholder="쉬는 시간에 한 줄만 — 퇴근 전에 케어 기록으로 정리" onkeydown="if(event.key=='Enter')addMemo()"><button class="btn pri sm" onclick="addMemo()">남기기</button></div>
+    ${DB.notes.filter(n=>n.from==ME.id).map(n=>`<div class="task"><span class="bd b">조교 당부</span><b>${esc(ST(n.sid).name)}</b><span class="sp" style="font-weight:500;min-width:0;overflow-wrap:anywhere">${esc(n.text)}</span><button class="btn sm ghost" onclick="delNote('${n.id}')">지우기</button></div>`).join('')}
     ${memos.map(m=>`<div class="task"><span class="small muted">${md(m.created)}</span>${m.sid?`<b>${esc(ST(m.sid).name)}</b>`:''}<span class="sp" style="font-weight:500;min-width:0;overflow-wrap:anywhere">${esc(m.text)}</span><button class="btn sm" onclick="openCare(${m.sid?`'${m.sid}'`:'null'},{finding:${esc(JSON.stringify(m.text))},memoId:'${m.id}'})">케어 기록으로 정리</button><button class="btn sm ghost" onclick="delMemo('${m.id}')">지우기</button></div>`).join('')}</div>`:'';
   return `<div class="mb">${picker}</div>${memoCard}
   ${asked.length?`<div class="card mb" style="background:var(--blue-soft);box-shadow:inset 0 0 0 1.5px var(--blue)"><div class="row"><span class="tic" style="color:var(--b-ink)">${ic('alert',18)}</span><b>원장님 확인 요청:</b> ${asked.map(s=>`<a onclick="nav('timeline',{sid:'${s.id}'})"><b>${esc(s.name)}</b></a>`).join(', ')}<span class="sp"></span><span class="small">챙긴 뒤 케어 기록을 남기면 원장님 화면에 "담임 챙기는 중"으로 바뀝니다</span></div></div>`:''}
@@ -1051,7 +1054,7 @@ function homePage(){
     ${churn.length?`<div class="card" style="box-shadow:inset 0 0 0 1.5px var(--red)"><div class="chead"><h3>그만둘 수 있는 신호</h3><span class="bd r">${churn.length}명</span></div>
       ${churn.map(({s,c})=>{const rs=DB.riskStatus[s.id]?.status;return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div class="row" style="flex-wrap:nowrap"><a onclick="nav('timeline',{sid:'${s.id}'})"><b>${esc(s.name)}</b></a>${newTag(s)}<span class="sp"></span>${rs&&rs!='new'?`<span class="bd ${RSTAT[rs][1]}">${RSTAT[rs][0]}</span>`:''}<span class="bd ${CHURN[c.level][1]}">${CHURN[c.level][0]} ${c.score}</span></div>
         <div class="row" style="gap:6px;margin-top:6px">${c.reasons.map(([t,k])=>`<span class="bd ${k}">${t}</span>`).join('')}</div>
-        ${canW?`<div class="row" style="margin-top:8px;gap:6px"><button class="btn sm pri" onclick='openCare("${s.id}",{area:"attitude",type:"${c.reasons[0][0].startsWith('숙제')?'missing':c.reasons[0][0].startsWith('단어')?'drop':'behavior'}",action:"parent"})'>챙기기 기록</button><button class="btn sm" onclick="openConsult('${s.id}')">상담 준비</button><button class="btn sm" onclick="openNote('${s.id}')">조교 당부</button></div>`:''}</div>`}).join('')}</div>`:''}
+        ${canW?`<div class="row" style="margin-top:8px;gap:6px"><button class="btn sm pri" onclick='openCare("${s.id}",{area:"attitude",type:"${c.reasons[0][0].startsWith('숙제')?'missing':c.reasons[0][0].startsWith('단어')?'drop':'behavior'}"})'>챙기기 기록</button><button class="btn sm" onclick="openConsult('${s.id}')">상담 준비</button><button class="btn sm" onclick="openNote('${s.id}')">조교 당부</button></div>`:''}</div>`}).join('')}</div>`:''}
     <div class="card"><div class="chead"><h3>결과 입력 대기</h3><span class="bd b">${results.length}건</span></div>
       ${results.length?results.map(r=>{const rec=DB.care.find(x=>x.id==r.rid);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div class="row" style="flex-wrap:nowrap"><b>${esc(r.st.name)}</b><span class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(rec.finding)}">${AREAS[rec.area]} · ${esc(rec.finding)}</span></div>
         <div class="row" style="margin-top:8px;flex-wrap:nowrap"><span class="small muted sp">${ACTIONS[rec.action]} · ${md(rec.follow)} 확인</span>${canW?`<div class="seg">${Object.entries(RESULTS).map(([k,l],i)=>`<button onclick="quickResult('${rec.id}','${k}')">${l}</button>`).join('')}</div><button class="btn sm ghost" onclick="openResult('${rec.id}')">자세히</button>`:''}</div></div>`}).join('')
@@ -1077,6 +1080,7 @@ function openNote(sid){
 }
 function saveNote(){if(!M.text.trim())return toast('당부 내용을 입력해 주세요',1);DB.notes.push({id:nid('NT'),sid:M.sid,from:ME.id,text:M.text.trim(),created:TODAY});DIRTY=true;closeModal();toast('조교 당부를 남겼습니다');render()}
 function addMemo(){const t=$('#memoText').value.trim();if(!t)return toast('메모 내용을 입력해 주세요',1);DB.memos.push({id:nid('MM'),teacher:ME.id,sid:$('#memoSid').value||null,text:t,created:TODAY});DIRTY=true;toast('메모 남김');render()}
+function delNote(id){if(!confirm('이 조교 당부를 지울까요?'))return;DB.notes=DB.notes.filter(n=>n.id!=id);DIRTY=true;toast('당부를 지웠습니다');render()}
 function delMemo(id){if(!confirm('이 메모를 지울까요?'))return;DB.memos=DB.memos.filter(m=>m.id!=id);DIRTY=true;render()}
 const teacherRate=due=>due.length?Math.round(due.filter(r=>r.result).length/due.length*100):null; // 확인할 기록이 없으면 '–'
 function quickResult(rid,res){if(res=='worse'&&!confirm('결과를 "악화"로 저장할까요? 원장 위험 학생 판단에 반영됩니다.'))return;const r=DB.care.find(x=>x.id==rid);r.result=res;DIRTY=true;toast(`결과 저장: ${RESULTS[res]}`);render()}
@@ -1200,7 +1204,7 @@ function entryPage(){
   const cls=entryClasses();
   if(ME.role=='assistant'&&ENT.cls&&!cls.find(c=>c.id==ENT.cls)&&CL(ENT.cls)?.type=='homeroom'){
     const bad=CL(ENT.cls);ENT.cls=null;
-    return `<div class="card empty"><b>${esc(bad.name)}</b>은 오늘 수업이 없는 반입니다.<br><span class="small">조교는 오늘 수업이 있는 반만 입력할 수 있습니다.</span><div style="margin-top:14px"><button class="btn pri" onclick="render()">오늘 수업 반으로</button></div></div>`;
+    return `<div class="card empty"><b>${esc(bad.name)}</b> — 오늘 수업이 없는 반입니다.<br><span class="small">조교는 오늘 수업이 있는 반만 입력할 수 있습니다.</span><div style="margin-top:14px"><button class="btn pri" onclick="render()">오늘 수업 반으로</button></div></div>`;
   }
   if(!cls.find(c=>c.id==ENT.cls))ENT.cls=(cls.find(c=>DB.sessions.some(s=>s.cls==c.id&&s.pending))||cls[0]).id;
   const c=CL(ENT.cls),sess=DB.sessions.filter(s=>s.cls==c.id).at(-1),ro=ME.role=='director';
@@ -1278,7 +1282,7 @@ function saveEntry(ssid){
     DB.att.push({sid,sess:ssid,date:sess.date,status:d.att});
     if(d.att=='absent'){fixed+=syncTickets(sid,sess,ssid,[]);return}
     DB.scores.push({id:nid('SC'),sid,sess:ssid,date:sess.date,type:'word',score:+d.score,max:30,passed:+d.score>=DB.settings.pass,wrong:d.wrong||null});
-    if(d.obs){DB.obs=DB.obs.filter(o=>!(o.sid==sid&&o.date==sess.date));DB.obs.push({sid,date:sess.date,tag:d.obs,by:ME.id})}
+    DB.obs=DB.obs.filter(o=>!(o.sid==sid&&o.date==sess.date));if(d.obs)DB.obs.push({sid,date:sess.date,tag:d.obs,by:ME.id});
     const sug=[];
     if(+d.score<DB.settings.pass)sug.push(['단어 기준 미달',`단어 재시험 (${d.score}/30)`,true]);
     Object.entries(d.hw).forEach(([it,v])=>{if(v)DB.hw.push({sid,sess:ssid,date:sess.date,item:it,status:v});
@@ -1517,7 +1521,7 @@ function consultData(sid){
     :hr>=.85?`${n}가 숙제를 성실하게 해 오고 있어요.`:`${n}가 수업에 꾸준히 참여하고 있어요.`;
   const script=[`안녕하세요, ${n} 담임 ${US(st.homeroom).name}입니다. ${praise}`,
     worry.length?`다만 요즘 ${worry.join('·')} 쪽이 조금 마음이 쓰여서 먼저 연락드렸어요.${did.length?` 학원에서는 ${did.join(', ')}${ro(did.at(-1))} 챙기고 있습니다.`:''}`:'',
-    worry.length?`집에서는 ${suggest[0]}`:`${suggest[0]}`,
+    worry.length?(/^(결석 이유|보충 학습)/.test(suggest[0])?suggest[0]:`집에서는 ${suggest[0]}`):`${suggest[0]}`,
     ...(worry.length?promise:promise.length?[SOFT]:[])].filter(Boolean).map(x=>/[.!?]$/.test(x)?x:x+'.');
   return{st,sc,a,b,hr,care,lg,sh,pts,ch,start,must,did,suggest:suggest.concat(promise.map(p=>'(담임 약속) '+p)),script,weak};
 }
@@ -1599,6 +1603,12 @@ const negHits=t=>NEG_WORDS.filter(w=>String(t||'').includes(w));
 // 선생님이 직접 쓴 글(코멘트·대표작 코멘트) 중 학부모 화면에 나갈 부정 표현
 function parentNegHits(sid,m){const b=bundle(sid,m);return[...new Set([...negHits(commentOf(sid,m).draft),...negHits(b.showcase.this?.comment),...negHits(b.showcase.prev?.comment)])]}
 const negWarn=h=>h.length?`<div class="card noprint" style="background:var(--red-soft);box-shadow:none;margin-bottom:14px"><b style="color:var(--r-ink)">⚠ 부정 표현 포함: ${h.map(esc).join(', ')}</b><div class="small" style="margin-top:4px">선생님이 쓴 코멘트에 있는 표현이 학부모 화면에 그대로 나갑니다. 확인 후 고쳐주세요.</div></div>`:'';
+function trendLine(d,a){
+  if(a==null)return '이번 달 단어 시험 기록이 아직 없어요';
+  if(d==null)return `이번 달 평균 ${a.toFixed(1)}점`;
+  const r=Math.round(d*10)/10;
+  return r==0?'지난달과 같은 점수예요':r>0?`지난달보다 +${r.toFixed(1)}점 올랐어요`:`이번 달 평균 ${a.toFixed(1)}점, 복습 루틴을 함께 다시 잡고 있어요`;
+}
 function parentView(sid,m){
   const st=ST(sid),b=bundle(sid,m),cm=commentOf(sid,m),M2=+m.slice(5);
   const pts=reportMonths().filter(x=>x<=m).slice(-3).map(x=>{const v=avg(scoresOf(sid).filter(s=>s.date.startsWith(x)));return v==null?null:{l:+x.slice(5)+'월',v:+v.toFixed(1)}}).filter(Boolean);
@@ -1611,7 +1621,7 @@ function parentView(sid,m){
   return `<div class="pv">${cm.approvedBy?'':'<div class="pv-ban">미리보기 · 담임 승인 전</div>'}
   <div class="pv-top"><div class="ac">${esc(ACADEMY_NAME)}</div><h2>${esc(st.name)} · ${M2}월 성장 리포트</h2><div class="small" style="opacity:.85;margin-top:4px">${st.grade} · 담임 ${esc(US(st.homeroom).name)} 선생님</div></div>
   <div class="pv-sec"><h4>선생님 한마디</h4><div style="line-height:1.7">${esc(cm.draft).replace(/\n/g,'<br>')}</div></div>
-  <div class="pv-sec"><h4>단어 실력 흐름</h4>${lineChart(pts,{min:15,max:30,h:140})}<div class="b" style="margin-top:6px">${d==null?'이번 달 평균 '+(b.word.avg?.toFixed(1)??'–')+'점':d>=0?`지난달보다 +${d.toFixed(1)}점 올랐어요`:`이번 달 평균 ${b.word.avg.toFixed(1)}점, 복습 루틴을 함께 다시 잡고 있어요`}</div></div>
+  <div class="pv-sec"><h4>단어 실력 흐름</h4>${lineChart(pts,{min:15,max:30,h:140})}<div class="b" style="margin-top:6px">${trendLine(d,b.word.avg)}</div></div>
   <div class="pv-sec"><h4>이번 달 이렇게 챙겼어요</h4>${picked.length?picked.map(story).join(''):'<div class="small muted">이번 달은 꾸준히 지켜보며 수업했어요.</div>'}</div>
   <div class="pv-sec"><h4>성실함</h4><div class="row" style="justify-content:space-around">
     <div style="text-align:center">${ring(b.homework.rate,{color:COL.b})}<div class="small muted">숙제 제출률</div></div>
@@ -1813,6 +1823,16 @@ T('케어 창 확인일·후보만 바꿔도 경고',()=>{ME=US('T1');openCare('
 T('메모 지우기 확인',()=>{window.confirm=()=>false;DB.memos.push({id:'MMd',teacher:'T1',text:'x',created:TODAY});ME=US('T1');delMemo('MMd');return DB.memos.some(m=>m.id=='MMd')});
 T('승인 전엔 새 리포트 후보 자동 포함',()=>{const st=DB.students[0];const cm=commentOf(st.id,'2026-09');DB.care.push({id:'CRnew',sid:st.id,teacher:st.homeroom,area:'word',type:'positive',finding:'x',action:'praise',follow:'2026-09-30',result:'improved',cand:true,created:'2026-09-29'});
   const a=commentOf(st.id,'2026-09').picked.includes('CRnew');pickCare(st.id+'|2026-09','CRnew',false);const b=!commentOf(st.id,'2026-09').picked.includes('CRnew');return a&&b});
+// 6단계 6-3 문구·정보
+T('"집에서는"이 어울리지 않는 부탁엔 안 붙음',()=>DB.students.every(s=>{const t=consultData(s.id).script.join(' ');return !/집에서는 (결석 이유|보충 학습)/.test(t)}));
+T('점수 변화 0이면 "지난달과 같아요"',()=>trendLine(0,25)=='지난달과 같은 점수예요'&&trendLine(1.24,25).includes('+1.2점')&&trendLine(null,null).includes('아직 없어요'));
+T('이번 달 시험 없으면 안내',()=>{const s=DB.students.find(x=>!DB.scores.some(z=>z.sid==x.id&&z.date.startsWith('2026-10')));return parentView(s.id,'2026-10').includes('이번 달 단어 시험 기록이 아직 없어요')});
+T('막힌 반 안내에 조사 없음',()=>{ME=US('A1');ENT.cls='C11';return entryPage().includes('</b> — 오늘 수업이 없는 반입니다')});
+T('챙기기 기록은 조치를 비워 둠',()=>{const s=DB.students.find(x=>x.pattern=='churn');ME=US(s.homeroom);HOMECLS=s.cls;return !homePage().includes('action:"parent"')});
+T('대시보드에 교사별 미입력·공백, 케어 유형',()=>{ME=US('D1');DTAB='overview';const h=dashboard();DTAB='brief';return h.includes('data-tstats')&&h.includes('data-types')&&/김지현: 미입력 \d+ · 공백 \d+명/.test(h)});
+T('조교 당부 지우기',()=>{window.confirm=()=>true;ME=US('T1');const n=DB.notes.find(x=>x.from=='T1')||(DB.notes.push({id:'NTx',sid:'S1',from:'T1',text:'t',created:TODAY}),DB.notes.at(-1));delNote(n.id);return !DB.notes.some(x=>x.id==n.id)});
+T('관찰 태그 해제 저장',()=>{ME=US('A1');const ss=DB.sessions.find(x=>x.pending);ENT.cls=ss.cls;entryPage();const sid=studentsOf(ss.cls)[0].id;openGrade(ss.id,sid);M.obs='sleepy';saveGrade();
+  Object.values(DRAFT[ss.id]).forEach(d=>{if(d.score==='')d.score=25});saveEntry(ss.id);ENT.cls=ss.cls;entryPage();openGrade(ss.id,sid);M.obs=null;saveGrade();saveEntry(ss.id);return !DB.obs.some(o=>o.sid==sid&&o.date==TODAY)});
 // 5단계
 T('경과 분',()=>elapsedMin('17:05','17:31')==26);
 T('일괄 입장',()=>{ME=US('A1');const sids=[...new Set(DB.tickets.filter(t=>t.status=='open'&&t.avail<=TODAY).map(t=>t.sid))];RS[sids[0]]={in:'09:00'};bulkCheckIn();return sids.every(s=>RS[s]&&RS[s].in)&&RS[sids[0]].in=='09:00'});
