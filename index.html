@@ -533,7 +533,12 @@ function addRoleData(db){
       db.scores=db.scores.filter(x=>!(x.sid==st.id&&x.sess==s.id));db.hw=db.hw.filter(x=>!(x.sid==st.id&&x.sess==s.id));
       const gone=new Set(db.tickets.filter(t=>t.sid==st.id&&t.src==s.date).map(t=>t.id));db.tickets.filter(t=>gone.has(t.from)).forEach(t=>gone.add(t.id));
       db.tickets=db.tickets.filter(t=>!gone.has(t.id));db.logs=db.logs.filter(l=>!gone.has(l.ticket));
-    });st.pattern='churn';
+    });
+    const ab=new Set(db.att.filter(a=>a.sid==st.id&&a.status=='absent').map(a=>a.date));
+    const days=db.sessions.filter(s=>s.cls==st.cls&&!s.pending).map(s=>s.date).filter(d=>!ab.has(d));
+    db.logs.filter(l=>l.sid==st.id&&ab.has(l.date)).forEach(l=>{const nx=days.find(d=>d>l.date);if(nx)l.date=nx});
+    db.logs=db.logs.filter(l=>!(l.sid==st.id&&ab.has(l.date)));
+    st.pattern='churn';
   });
   // 문항별 오답: 학생마다 약한 단어 3개가 자주 틀림
   db.students.forEach(st=>{const weak=[pick(WORDS),pick(WORDS),pick(WORDS)];
@@ -642,7 +647,7 @@ function churnOf(st){
   const sc4=scoresOf(st.id),a=avg(sc4.filter(x=>x.date>from)),b=avg(sc4.filter(x=>x.date<=from&&x.date>addDays(TODAY,-56)));
   if(a&&b&&a<=b*.9)add(20,`단어 평균 ${Math.round((1-a/b)*100)}%↓`,'a');
   const wd=wordDrop(st.id);if(wd&&wd.date>from)add(10,`급락 ${wd.pct}%`,'a');
-  if(fail2Of(st.id))add(10,'미달 2회 연속','a');
+  if(fail2Of(st.id,from))add(10,'미달 2회 연속','a');
   const inc=termInc(st.id);if(inc>=2)add(15,`나머지 미완 ${inc}회`);
   const lc=lastCare(st.id),g=lc?diff(TODAY,lc):diff(TODAY,st.enrolled||TODAY);if(g>=21)add(10,`관찰 공백 ${g}일`,'n');
   const w=DB.care.filter(r=>r.sid==st.id&&r.result=='worse').length;if(w)add(10,`악화 ${w}건`);
@@ -664,7 +669,7 @@ const isPassScore=v=>v>=DB.settings.pass;
 // 담임 화면·퇴원 위험이 함께 쓰는 단어 점수 신호
 function wordDrop(sid){const sc=scoresOf(sid);if(sc.length<4)return null;const last=sc.at(-1),a=avg(sc.slice(-4,-1));
   return last.score<=a*(1-DB.settings.dropPct/100)?{last,avg:a,pct:Math.round((1-last.score/a)*100),date:last.date}:null}
-function fail2Of(sid){const sc=scoresOf(sid).slice(-2);return sc.length==2&&sc.every(x=>!isPassScore(x.score))?sc:null}
+function fail2Of(sid,from){const sc=scoresOf(sid).slice(-2);return sc.length==2&&sc.every(x=>!isPassScore(x.score))&&(!from||sc[1].date>from)?sc:null}
 // 위험 학생 처리 상태
 const RSTAT={new:['새로','n'],asked:['담임 확인 요청','b'],acting:['담임 챙기는 중','a'],contacted:['학부모 연락함','a'],done:['해결','g']};
 function setRisk(sid,status){DB.riskStatus[sid]={status,at:TODAY};DIRTY=true}
@@ -682,7 +687,8 @@ function guideFor(task){
 }
 const gradeScore=wrong=>30-new Set(wrong).size;
 // 자주 틀리는 단어 (최근 8주)
-function weakWords(sid,n=5){const c={};DB.scores.filter(x=>x.sid==sid&&x.wrong&&x.date>addDays(TODAY,-56)).forEach(x=>{const k=wordKey(x.sess);x.wrong.forEach(i=>{const w=k[i-1];c[w]=(c[w]||0)+1})});return Object.entries(c).filter(([,v])=>v>=3).sort((a,b)=>b[1]-a[1]).slice(0,n)}
+function weakWords(sid,n=5){const c={},seen={};DB.scores.filter(x=>x.sid==sid&&x.wrong&&x.date>addDays(TODAY,-56)).forEach(x=>{const k=wordKey(x.sess),w=new Set(x.wrong);k.forEach((word,i)=>{seen[word]=(seen[word]||0)+1;if(w.has(i+1))c[word]=(c[word]||0)+1})});
+  return Object.entries(c).map(([w,v])=>[w,v,v/seen[w]]).filter(([,v,r])=>v>=3&&r>=.4).sort((a,b)=>b[1]-a[1]).slice(0,n)} // 나온 횟수 대비 40% 이상 틀린 단어만
 
 /* ============ chart helpers ============ */
 function ring(p,{size=78,color=COL.g,center,sub}={}){
@@ -720,7 +726,7 @@ function bars(items,{max,fmtv=v=>v}={}){
   const m=max||Math.max(1,...items.map(i=>i.stack?i.stack.reduce((a,s)=>a+s.v,0):i.v));
   return `<div class="bars">${items.map(i=>{
     const segs=i.stack||[{v:i.v,c:i.c||COL.g}];const tot=segs.reduce((a,s)=>a+s.v,0);
-    return `<div class="bcol" title="${esc(i.l)}"><span class="bval">${fmtv(tot)}</span><div class="btrack">${segs.map(s=>`<div class="bfill" style="height:${s.v/m*100}%;background:${s.c}"></div>`).join('')}</div><span class="blab">${esc(i.l)}</span></div>`}).join('')}</div>`;
+    return `<div class="bcol" title="${esc(i.l)}"><span class="bval">${fmtv(tot,i)}</span><div class="btrack">${segs.map(s=>`<div class="bfill" style="height:${s.v/m*100}%;background:${s.c}"></div>`).join('')}</div><span class="blab">${esc(i.l)}</span></div>`}).join('')}</div>`;
 }
 const hbar=segs=>{const t=segs.reduce((a,s)=>a+s.v,0)||1;return `<div class="hbar">${segs.map(s=>`<span style="width:${s.v/t*100}%;background:${s.c}" title="${s.l||''} ${s.v}"></span>`).join('')}</div>`};
 const meter=(p,c=COL.g)=>`<div class="meter"><span style="width:${Math.round((p||0)*100)}%;background:${c}"></span></div>`;
@@ -749,7 +755,7 @@ const NAV={
 const FIRST={director:'dashboard',teacher:'home',native_teacher:'home',assistant:'remedial'};
 const TITLE={parent:'학부모 리포트 미리보기',dashboard:'원장 대시보드',home:'오늘 챙길 학생',entry:'점수 · 숙제 · 출결 입력',remedial:'강당 나머지 학습',students:'학생',timeline:'학생 타임라인',report:'월말 개별 리포트',admin:'관리 · 설정',showcase:'대표작 선택'};
 function nav(page,p={}){R={page,p};render();window.scrollTo(0,0)}
-function login(id){ME=US(id);dismissed=new Set();nav(FIRST[ME.role])}
+function login(id){ME=US(id);dismissed=new Set();ENT.cls=null;nav(FIRST[ME.role])}
 function logout(){ME=null;render()}
 function resetDemo(){if(!confirm('입력한 내용이 모두 지워집니다. 초기화할까요?'))return;DIRTY=false;DB=buildData();dismissed=new Set();RS={};DRAFT={};toast('데모 데이터 초기화됨')}
 
@@ -800,6 +806,7 @@ let FILT={teacher:'',cls:'',grade:'',school:'',period:'14',type:''},RISKALL=fals
 const nextMonth=m=>{const d=D(m+'-01');d.setMonth(d.getMonth()+1);return fmt(d).slice(0,7)};
 const byToday=(a,b)=>(isClassDay(b,TODAY)-isClassDay(a,TODAY))||(a.start<b.start?-1:a.start>b.start?1:0);
 function reportMonths(){return[...new Set([...DB.scores.map(x=>x.date.slice(0,7)),TODAY.slice(0,7)])].sort()}
+function hiddenCount(cid){const keep=dismissed;dismissed=new Set();const keys=new Set(careItems(cid).flatMap(g=>[g.top,...g.rest]).map(i=>i.key));dismissed=keep;return [...keep].filter(k=>keys.has(k)).length}
 function unhide(cid){const ids=new Set(studentsOf(cid).map(s=>s.id));[...dismissed].forEach(k=>{if(ids.has(k.split('|')[0]))dismissed.delete(k)});render()}
 function setF(k,v){FILT[k]=v;if(k=='teacher')FILT.cls='';render()}
 function filtStudents(){return DB.students.filter(s=>(!FILT.teacher||s.homeroom==FILT.teacher)&&(!FILT.cls||s.cls==FILT.cls)&&(!FILT.grade||s.grade==FILT.grade)&&(!FILT.school||s.school==FILT.school))}
@@ -929,7 +936,7 @@ function dashOverview(set,studs,start,careP,teachers){
   const remDays=days14.map(d=>{const L=DB.logs.filter(l=>l.date==d&&set.has(l.sid));return {l:md(d),stack:[{v:L.filter(l=>l.outcome=='done').length,c:COL.g},{v:L.filter(l=>l.outcome=='partial').length,c:COL.a},{v:L.filter(l=>l.outcome=='incomplete').length,c:COL.r}]}}).filter(x=>x.stack.some(s=>s.v));
   const calCounts={};DB.care.filter(r=>set.has(r.sid)).forEach(r=>calCounts[r.created]=(calCounts[r.created]||0)+1);
   const tStats=teachers.filter(t=>!FILT.teacher||t.id==FILT.teacher).map(t=>{const ss=studs.filter(s=>s.homeroom==t.id);const cr=DB.care.filter(r=>r.teacher==t.id&&r.created>=start&&set.has(r.sid));const due=cr.filter(r=>r.follow<=TODAY);
-    return {t,rate:due.length?Math.round(due.filter(r=>r.result).length/due.length*100):100,pend:cr.filter(r=>!r.result&&r.follow<=TODAY).length,gap:ss.filter(s=>{const l=lastCare(s.id,t.id);return !l||diff(TODAY,l)>=DB.settings.gapDays}).length}});
+    return {t,rate:teacherRate(due),pend:cr.filter(r=>!r.result&&r.follow<=TODAY).length,gap:ss.filter(s=>{const l=lastCare(s.id,t.id);return !l||diff(TODAY,l)>=DB.settings.gapDays}).length}});
   const flowN={f:careP.length,a:careP.filter(r=>r.action).length,r:careP.filter(r=>r.result).length,i:careP.filter(r=>r.result=='improved').length};
   return `<div class="grid g2 mb">
     <div class="card"><div class="chead"><h3>단어 점수 주간 평균</h3><span class="bd g">통과율 ${pct(pr)}</span></div>
@@ -942,7 +949,7 @@ function dashOverview(set,studs,start,careP,teachers){
     <div class="card"><div class="chead"><h3>나머지 결과 · 14일</h3></div>${remDays.length?bars(remDays):'<div class="empty">기록 없음</div>'}
       <div class="legend" style="margin-top:10px"><span><i style="background:${COL.g}"></i>완료</span><span><i style="background:${COL.a}"></i>부분</span><span><i style="background:${COL.r}"></i>미완</span></div></div>
     <div class="card"><div class="chead"><h3>교사별 결과 입력률</h3></div>
-      ${bars(tStats.map(x=>({l:x.t.name,v:x.rate,c:x.rate<80?COL.a:COL.g})),{max:100,fmtv:v=>v+'%'})}
+      ${bars(tStats.map(x=>({l:x.t.name,v:x.rate??0,c:x.rate==null?COL.n:x.rate<80?COL.a:COL.g,na:x.rate==null})),{max:100,fmtv:(v,i)=>i.na?'–':v+'%'})}
       <div class="small muted" style="margin-top:10px">확인일 지난 기록 중 결과를 입력한 비율 · 목표 80%</div></div>
     <div class="card"><div class="chead"><h3>${+CALM.slice(5)}월 기록 캘린더</h3><button class="btn icon ghost" onclick="CALM=prevMonth(CALM);render()">‹</button><button class="btn icon ghost" ${CALM>=TODAY.slice(0,7)?'disabled':''} onclick="CALM=nextMonth(CALM);render()">›</button></div>${heatCal(CALM,calCounts)}
       <div class="legend" style="margin-top:10px"><span><i style="background:var(--surf);border:1px solid var(--line)"></i>0</span><span><i style="background:var(--g-soft)"></i>1–2</span><span><i style="background:var(--g-mid)"></i>3–5</span><span><i style="background:var(--acc)"></i>6+</span></div></div>
@@ -1029,7 +1036,7 @@ function homePage(){
         <div class="main2"><div class="nm"><a onclick="nav('timeline',{sid:'${st.id}'})">${esc(st.name)}</a></div><div class="why" title="${esc(t.text)}">${esc(t.text)}</div>${rest.length?`<div class="more" title="${esc(rest.map(x=>x.text).join(' / '))}">+ ${rest.map(x=>esc(x.text.split(' · ')[0].split(' — ')[0])).join(' / ')}</div>`:''}</div>
         <div class="acts">${canW?actBtn(t):''}${canW?`<button class="btn sm ghost" title="오늘 목록에서 빼기" onclick="dismiss('${t.key}')">${ic('check',14)}확인함</button>`:''}</div></div>`).join(''):'<div class="empty">오늘 챙길 학생이 없습니다 👍</div>'}
       <div class="row" style="margin-top:8px">${items.length>top.length?`<span class="small muted">외 ${items.length-top.length}명은 다음 순위</span>`:''}<span class="sp"></span>
-      ${(()=>{const ids=new Set(studs.map(s=>s.id)),n=[...dismissed].filter(k=>ids.has(k.split('|')[0])).length;return n?`<button class="btn sm ghost" onclick="unhide('${c.id}')">숨긴 항목 ${n}개 다시 보기</button>`:''})()}</div></div>
+      ${(()=>{const n=hiddenCount(c.id);return n?`<button class="btn sm ghost" onclick="unhide('${c.id}')">숨긴 항목 ${n}개 다시 보기</button>`:''})()}</div></div>
 
     <div class="card"><div class="chead"><h3>반 학생 ${studs.length}명</h3>${canW?`<button class="btn sm pri" onclick="openCare(null)">${ic('plus',14)}케어 기록</button>`:''}</div>
       <div class="tblw"><table class="t"><tr><th>학생</th>${native?'<th>9월 대표작</th><th>10월 대표작</th>':'<th>단어 추이</th><th>숙제 (4주)</th>'}<th>케어</th><th></th></tr>
@@ -1070,7 +1077,8 @@ function openNote(sid){
 }
 function saveNote(){if(!M.text.trim())return toast('당부 내용을 입력해 주세요',1);DB.notes.push({id:nid('NT'),sid:M.sid,from:ME.id,text:M.text.trim(),created:TODAY});DIRTY=true;closeModal();toast('조교 당부를 남겼습니다');render()}
 function addMemo(){const t=$('#memoText').value.trim();if(!t)return toast('메모 내용을 입력해 주세요',1);DB.memos.push({id:nid('MM'),teacher:ME.id,sid:$('#memoSid').value||null,text:t,created:TODAY});DIRTY=true;toast('메모 남김');render()}
-function delMemo(id){DB.memos=DB.memos.filter(m=>m.id!=id);DIRTY=true;render()}
+function delMemo(id){if(!confirm('이 메모를 지울까요?'))return;DB.memos=DB.memos.filter(m=>m.id!=id);DIRTY=true;render()}
+const teacherRate=due=>due.length?Math.round(due.filter(r=>r.result).length/due.length*100):null; // 확인할 기록이 없으면 '–'
 function quickResult(rid,res){if(res=='worse'&&!confirm('결과를 "악화"로 저장할까요? 원장 위험 학생 판단에 반영됩니다.'))return;const r=DB.care.find(x=>x.id==rid);r.result=res;DIRTY=true;toast(`결과 저장: ${RESULTS[res]}`);render()}
 function actBtn(t){
   if(t.act=='result')return `<button class="btn sm pri" onclick="openResult('${t.rid}')">결과 입력</button>`;
@@ -1092,7 +1100,7 @@ let M={},MF=null;
 function showModal(fn){MF=fn;rm()}
 function rm(){setTimeout(()=>a11yFix($('#modal')));$('#modal').innerHTML=MF?`<div class="mbg" onclick="if(event.target==this)tryClose()"><div class="modal">${MF()}</div></div>`:''}
 function closeModal(){MF=null;rm()}
-const careSnap=()=>JSON.stringify([M.area,M.type,(M.finding||'').trim(),M.action]);
+const careSnap=()=>JSON.stringify([M.sid,M.area,M.type,(M.finding||'').trim(),M.action,M.follow,M.cand]);
 function modalDirty(){return M.kind=='care'&&careSnap()!==M._init}
 function tryClose(){if(modalDirty()&&!confirm('작성 중인 내용이 사라집니다. 닫을까요?'))return;closeModal()}
 function chips(list,cur,key){return `<div class="chips">${list.map(([v,l])=>`<button class="chip ${cur==v?'on':''}" onclick="M.${key}='${v}';rm()">${l}</button>`).join('')}</div>`}
@@ -1246,7 +1254,7 @@ function openGrade(ss,sid){
 }
 function gTap(n){M.wrong.has(n)?M.wrong.delete(n):M.wrong.add(n);rm()}
 function saveGrade(){const d=DRAFT[M.ss][M.sid];d.wrong=[...M.wrong].sort((a,b)=>a-b);d.score=gradeScore(d.wrong);d.obs=M.obs;DIRTY=true;closeModal();render()}
-function setScore(ss,sid,el){const v=clampScore(el.value);DRAFT[ss][sid].score=v;DRAFT[ss][sid].wrong=null;document.getElementById('pb-'+sid).innerHTML=scoreBadge(v)}
+function setScore(ss,sid,el){const v=clampScore(el.value);if(v!==''&&String(v)!==el.value.trim())el.value=v;DRAFT[ss][sid].score=v;DRAFT[ss][sid].wrong=null;document.getElementById('pb-'+sid).innerHTML=scoreBadge(v)}
 function cycHw(ss,sid,it){DIRTY=true;const o=['','O','△','X'],d=DRAFT[ss][sid].hw;d[it]=o[(o.indexOf(d[it])+1)%4];render()}
 function allHw(ss,it){DIRTY=true;Object.values(DRAFT[ss]).forEach(d=>{if(d.att!='absent')d.hw[it]='O'});render()}
 // 4-3 점수·숙제를 고치면 이 수업에서 나온, 아직 처리 안 한 티켓·제안을 새 결과에 맞춤
@@ -1288,7 +1296,13 @@ function saveEntry(ssid){
 /* ============ 강당 나머지 (F4) ============ */
 let RS={};
 const shuttleKey=st=>st.shuttle=='도보'||!st.shuttle?'99:99':st.shuttle.padStart(5,'0');
-const elapsedMin=(from,now)=>{const m=t=>+t.slice(0,2)*60+ +t.slice(3,5);return Math.max(0,m(now)-m(from))};
+const elapsedMin=(from,now)=>{const m=t=>+t.slice(0,2)*60+ +t.slice(3,5);return (m(now)-m(from)+1440)%1440};
+// 20·40분 체크가 지금 필요한지: 저장할 때 필수 규칙과 같은 조건
+function dueChecks(r,ts,el){const out=outOf(r,ts);return{due20:!!r.in&&el>=20&&r.c20==null&&r.pass!='10',due40:!!r.in&&el>=40&&r.c40==null&&!(out=='done'&&(r.pass=='10'||r.pass=='30'))}}
+// 셔틀: 남은 시간 / 출발함 (12시간 넘게 남으면 이미 출발한 것으로 봄)
+function shuttleInfo(sh,now){if(!sh||sh=='도보')return{text:'도보 귀가',cls:'n'};const left=elapsedMin(now,sh.padStart(5,'0'));
+  if(left>720)return{text:`셔틀 ${sh} · 출발함`,cls:'n'};return{text:`셔틀 ${sh}${left>0&&left<=120?` · ${left}분 남음`:''}`,cls:left<=20?'r':left<=120?'a':'n'}}
+const shuttleCmp=(a,b)=>shuttleKey(a).localeCompare(shuttleKey(b))||a.name.localeCompare(b.name,'ko');
 function bulkCheckIn(){
   const t=nowHM();let n=0;
   DB.tickets.filter(x=>x.status=='open'&&x.avail<=TODAY).forEach(x=>{const r=RS[x.sid]||(RS[x.sid]={});if(!r.in){r.in=t;n++}});
@@ -1310,7 +1324,7 @@ function remedialPage(){
     <div class="stat" style="justify-content:space-between">${ro?'<span class="small muted">입장 → 20·40분 체크 → 결과<br>당일 연장 없음 · 미완은 다음 회차로</span>':`<div><div class="sv">${notIn}명</div><div class="sl">아직 입장 안 함</div></div><button class="btn pri sm" ${notIn?'':'disabled'} onclick="bulkCheckIn()">모두 입장</button>`}</div>
   </div>
   ${ro?`<div class="card in mb"><span class="small">조회 화면입니다. 결과 입력은 <b>조교</b> 역할에서 할 수 있습니다.</span></div>`:sinceCard(by)}
-  <div class="rgrid">${Object.entries(by).sort(([a],[b])=>shuttleKey(ST(a))<shuttleKey(ST(b))?-1:1).map(([sid,ts])=>remCard(sid,ts,ro)).join('')||'<div class="card empty">대기 학생이 없습니다</div>'}</div>
+  <div class="rgrid">${Object.entries(by).sort(([a],[b])=>shuttleCmp(ST(a),ST(b))).map(([sid,ts])=>remCard(sid,ts,ro)).join('')||'<div class="card empty">대기 학생이 없습니다</div>'}</div>
   ${(()=>{const pend=DB.suggestions.filter(x=>x.status=='pending'&&x.date==TODAY&&scope.has(x.sid)&&!by[x.sid]); /* 오늘 것만: 조교는 지난 점수 못 봄 */ return pend.length?`<div class="card" style="margin-top:18px"><div class="chead"><h3>담임 확정 대기</h3><span class="bd a">${pend.length}건</span><span class="small muted">담임이 확정하면 위 명단에 올라옵니다. 먼저 온 학생은 자리만 안내해 주세요</span></div>${pend.map(x=>`<div class="task"><b>${esc(stLabel(ST(x.sid)))}</b><span class="sp small" style="font-weight:500">${esc(x.task)}</span><span class="small muted">${US(ST(x.sid).homeroom).name} 선생님</span></div>`).join('')}</div>`:''})()}
   <div class="card" style="margin-top:18px"><div class="chead"><h3>오늘 처리 결과</h3><span class="small muted">담당 교사 화면에 자동 요약됩니다</span></div>
     ${nD?`<div class="tblw"><table class="t"><tr><th>학생</th><th>과제</th><th>결과</th><th>소요</th><th>태도</th><th>추가 과제</th>${ro?'':'<th></th>'}</tr>${tl.map((l,i)=>`<tr><td><b>${esc(stLabel(ST(l.sid)))}</b></td><td>${esc(l.task)}</td><td>${outBadge(l.outcome)}</td><td class="small">${PASS[l.pass]}</td><td class="small">${ATT[l.att]}</td><td class="small">${l.extra?esc(DB.extra.find(e=>e.id==l.extra)?.title)+(l.extraDone?' ✓':''):'–'}</td>${ro?'':`<td style="text-align:right">${tl.findIndex(x=>x.sid==l.sid)==i?`<button class="btn sm ghost" onclick="undoRem('${l.sid}')">되돌리기</button>`:''}</td>`}</tr>`).join('')}</table></div>`:'<div class="empty">아직 없음</div>'}</div>`;
@@ -1339,9 +1353,9 @@ function remCard(sid,ts,ro){
   const ex=DB.extra.filter(e=>e.active&&(e.level=='all'||e.level==st.level));
   const out=outOf(r,ts),taps=[r.in,out,r.pass,r.att].filter(Boolean).length;
   const el=r.in?elapsedMin(r.in,nowHM()):0;
-  const due20=r.in&&el>=20&&r.c20==null,due40=r.in&&el>=40&&r.c40==null;
-  const left=st.shuttle&&st.shuttle!='도보'?elapsedMin(nowHM(),st.shuttle.padStart(5,'0')):null;
-  const shut=`<span class="bd ${left!=null&&left<=20?'r':left!=null&&left<=120?'a':'n'}" data-shuttle="${esc(st.shuttle||'도보')}">${st.shuttle=='도보'?'도보 귀가':`셔틀 ${st.shuttle}${left!=null&&left>0&&left<=120?` · ${left}분 남음`:''}`}</span>`;
+  const{due20,due40}=dueChecks(r,ts,el);
+  const si=shuttleInfo(st.shuttle,nowHM());
+  const shut=`<span class="bd ${si.cls}" data-shuttle="${esc(st.shuttle||'도보')}">${si.text}</span>`;
   const head=`<div class="row" style="flex-wrap:nowrap">${avatar(st.name)}<div class="sp" style="min-width:0"><div class="row" style="gap:6px"><span class="b" style="font-size:15.5px">${esc(stLabel(st))}</span>${shut}</div>
     <div class="row" style="gap:6px;margin-top:4px">${ts.map(t=>`<span class="tpill">${t.from?'<span class="bd a" style="padding:1px 6px">이월</span>':''}${esc(t.task)}</span>`).join('')}</div></div>
     ${ro?'<span class="bd n">대기</span>':`<div class="stepper" title="필수 입력 ${taps}/4">${[0,1,2,3].map(i=>`<i class="${i<taps?'on':''}"></i>`).join('')}</div>`}</div>`;
@@ -1388,17 +1402,19 @@ function saveRem(sid){
 }
 // 4-2 오늘 결과 되돌리기: 오늘 기록 삭제 → 과제 다시 대기 → 오늘 만든 이월 과제 삭제
 function undoRem(sid){
-  const logs=DB.logs.filter(l=>l.sid==sid&&l.date==TODAY),tids=new Set(logs.map(l=>l.ticket));
+  const mine=l=>l.sid==sid&&l.date==TODAY&&l.assistant==ME.id; // 다른 조교 기록은 건드리지 않음
+  const logs=DB.logs.filter(mine),tids=new Set(logs.map(l=>l.ticket));
   if(!logs.length)return false;
   DB.tickets=DB.tickets.filter(t=>!(tids.has(t.from)&&t.avail==addDays(TODAY,1)&&!DB.logs.some(l=>l.ticket==t.id)));
   DB.tickets.forEach(t=>{if(tids.has(t.id))t.status='open'});
-  DB.logs=DB.logs.filter(l=>!(l.sid==sid&&l.date==TODAY));
+  DB.logs=DB.logs.filter(l=>!mine(l));
   DIRTY=true;toast(`${ST(sid).name} 오늘 결과를 되돌렸습니다`);render();return true;
 }
 // 4-4 티켓 취소: 아직 처리 안 한 과제만, 담임(자기 학생)·원장
 function cancelTicket(id){
   const t=DB.tickets.find(x=>x.id==id);
   if(!t)return false;
+  if(t.status!='open'){toast('이미 처리되었거나 취소된 과제입니다',1);return false}
   if(DB.logs.some(l=>l.ticket==id)){toast('이미 처리된 과제는 취소할 수 없습니다',1);return false}
   if(!(ME.role=='director'||(ME.role=='teacher'&&ST(t.sid).homeroom==ME.id))){toast('담임 또는 원장만 취소할 수 있습니다',1);return false}
   if(!confirm(`${ST(t.sid).name} · ${t.task} 과제를 취소할까요?`))return false;
@@ -1574,7 +1590,8 @@ function aiDraft(b){
 }
 const ACADEMY_NAME='OO영어학원';
 function commentOf(sid,m){
-  const key=sid+'|'+m;if(DB.comments[key])return DB.comments[key];
+  const key=sid+'|'+m,cm=DB.comments[key];
+  if(cm){if(!cm.approvedBy){const un=cm.unpicked||[];bundle(sid,m).care.filter(r=>(r.result=='improved'||r.type=='positive')&&!cm.picked.includes(r.id)&&!un.includes(r.id)).forEach(r=>cm.picked.push(r.id))}return cm}
   const b=bundle(sid,m);
   return DB.comments[key]={draft:aiDraft(b),approvedBy:null,picked:b.care.filter(r=>r.result=='improved'||r.type=='positive').map(r=>r.id)};
 }
@@ -1642,7 +1659,7 @@ function draftInput(key,v){
   if(c.approvedBy){c.approvedBy=null;const b=document.getElementById('apvbadge');if(b)b.innerHTML='<span class="bd a">검토 대기 · 수정됨</span>'}
   const w=document.getElementById('negwarn');if(w)w.innerHTML=negWarn(parentNegHits(REP.sid,REP.month));
 }
-function pickCare(key,id,v){const p=DB.comments[key].picked;if(v)p.push(id);else p.splice(p.indexOf(id),1)}
+function pickCare(key,id,v){const c=DB.comments[key],p=c.picked;c.unpicked=c.unpicked||[];if(v){if(!p.includes(id))p.push(id);c.unpicked=c.unpicked.filter(x=>x!=id)}else{const i=p.indexOf(id);if(i>=0)p.splice(i,1);if(!c.unpicked.includes(id))c.unpicked.push(id)}}
 function dlJSON(){const b=bundle(REP.sid,REP.month),cm=DB.comments[REP.sid+'|'+REP.month];
   dl(`리포트_${b.student.name}_${REP.month}.json`,JSON.stringify({...b,care:b.care.filter(r=>cm.picked.includes(r.id)),comment:cm},null,2),'application/json');toast('JSON 내보내기')}
 function dlAll(){dl(`리포트데이터_${REP.month}.csv`,csv([['학생','학년','반','담임','단어 평균','전월','숙제 제출률','나머지 횟수','나머지 완료','리포트 후보 수'],...DB.students.map(s=>{const b=bundle(s.id,REP.month);return[s.name,s.grade,b.student.class,b.student.homeroom,b.word.avg?.toFixed(1),b.word.prev?.toFixed(1),pct(b.homework.rate),b.remedial.count,b.remedial.done,b.care.length]})]));toast('CSV 다운로드')}
@@ -1777,6 +1794,25 @@ T('누르는 것은 모두 키보드로',()=>{let miss=0;for(const [u,pg] of PAG
 T('토글도 키보드 초점',()=>{ME=US('D1');R={page:'admin',p:{}};ADM='extra';render();const i=document.querySelector('.toggle input');ADM='settings';const ok=i&&getComputedStyle(i).display!='none';ME=null;render();return ok});
 T('확인함 버튼에 글자',()=>{ME=US('T1');HOMECLS='C11';return /onclick="dismiss\([^"]*\)"[^>]*>[^<]*(<svg[\s\S]*?<\/svg>)?\s*확인함/.test(homePage())});
 T('부정 표현 경고는 버튼 아래',()=>{ME=US('D1');REP.sid='S1';REP.month='2026-09';const h=reportPage();return h.indexOf('id="negwarn"')>h.indexOf('>승인<')||h.indexOf('id="negwarn"')>h.indexOf('승인</button>')});
+// 6단계 6-2 예외 상황
+T('점수 칸 보정값 바로 표시',()=>{ME=US('A1');const ss=DB.sessions.find(x=>x.pending);ENT.cls=ss.cls;R={page:'entry',p:{}};render();const el=document.querySelector('.scin');el.value='31';el.dispatchEvent(new Event('input'));const v=el.value;ME=null;render();return v=='30'});
+T('확인할 기록 없는 교사 입력률은 비움',()=>teacherRate([])===null&&teacherRate([{result:'improved'},{result:null}])===50);
+T('숨긴 항목은 실제 숨긴 것만',()=>{ME=US('T1');const it=careItems('C11')[0];dismissed.add(it.top.key);dismissed.add('S1|없는코드');return hiddenCount('C11')==1});
+T('미달 2회 신호는 4주 안만',()=>{const s=DB.students.find(x=>fail2Of(x.id));const f2=fail2Of(s.id);return fail2Of(s.id,addDays(f2[1].date,1))===null&&!!fail2Of(s.id,addDays(f2[1].date,-1))});
+T('역할 바꾸면 선택 반 초기화',()=>{ENT.cls='C11';login('A1');return ENT.cls===null});
+T('되돌리기는 내 기록만',()=>{const sid='S1';DB.tickets.push({id:'Tm',sid,task:'x',status:'done',avail:TODAY,src:TODAY},{id:'To',sid,task:'y',status:'done',avail:TODAY,src:TODAY});
+  DB.logs.push({id:'Lm',ticket:'Tm',sid,date:TODAY,assistant:'A1',outcome:'done'},{id:'Lo',ticket:'To',sid,date:TODAY,assistant:'A2',outcome:'done'});ME=US('A1');undoRem(sid);return !DB.logs.some(l=>l.id=='Lm')&&DB.logs.some(l=>l.id=='Lo')&&DB.tickets.find(t=>t.id=='To').status=='done'});
+T('취소된 티켓 다시 취소 안 됨',()=>{window.confirm=()=>true;ME=US('D1');const t=DB.tickets.find(x=>x.status=='open'&&!DB.logs.some(l=>l.ticket==x.id));cancelTicket(t.id);return cancelTicket(t.id)===false});
+T('결석한 날 나머지 기록 없음',()=>DB.students.filter(s=>s.pattern=='churn').every(s=>{const ab=new Set(DB.att.filter(a=>a.sid==s.id&&a.status=='absent'&&a.date>='2026-09-01').map(a=>a.date));return !DB.logs.some(l=>l.sid==s.id&&ab.has(l.date))}));
+T('자주 틀리는 단어는 틀린 비율 40% 이상',()=>DB.students.slice(0,30).every(s=>weakWords(s.id).every(([w,n,r])=>n>=3&&r>=.4)));
+T('자정 넘겨도 경과 시간',()=>elapsedMin('23:50','00:10')==20);
+T('체크 필요 없는 학생은 깜빡임 없음',()=>!dueChecks({in:'10:00',pass:'10',outs:{}},[],30).due20&&dueChecks({in:'10:00'},[],30).due20&&!dueChecks({in:'10:00',pass:'30',outs:{a:'done'}},[{id:'a'}],45).due40);
+T('출발한 셔틀은 회색 출발함',()=>{const a=shuttleInfo('17:50','18:05'),b=shuttleInfo('17:50','17:40');return a.text.includes('출발함')&&a.cls=='n'&&b.text.includes('10분 남음')});
+T('같은 셔틀 시간 순서 고정',()=>{const x={name:'가',shuttle:'17:50'},y={name:'나',shuttle:'17:50'};return shuttleCmp(x,y)<0&&shuttleCmp(y,x)>0});
+T('케어 창 확인일·후보만 바꿔도 경고',()=>{ME=US('T1');openCare('S1',{area:'word'});M.follow=addDays(M.follow,3);const a=modalDirty();openCare('S1',{});M.cand=!M.cand;return a&&modalDirty()});
+T('메모 지우기 확인',()=>{window.confirm=()=>false;DB.memos.push({id:'MMd',teacher:'T1',text:'x',created:TODAY});ME=US('T1');delMemo('MMd');return DB.memos.some(m=>m.id=='MMd')});
+T('승인 전엔 새 리포트 후보 자동 포함',()=>{const st=DB.students[0];const cm=commentOf(st.id,'2026-09');DB.care.push({id:'CRnew',sid:st.id,teacher:st.homeroom,area:'word',type:'positive',finding:'x',action:'praise',follow:'2026-09-30',result:'improved',cand:true,created:'2026-09-29'});
+  const a=commentOf(st.id,'2026-09').picked.includes('CRnew');pickCare(st.id+'|2026-09','CRnew',false);const b=!commentOf(st.id,'2026-09').picked.includes('CRnew');return a&&b});
 // 5단계
 T('경과 분',()=>elapsedMin('17:05','17:31')==26);
 T('일괄 입장',()=>{ME=US('A1');const sids=[...new Set(DB.tickets.filter(t=>t.status=='open'&&t.avail<=TODAY).map(t=>t.sid))];RS[sids[0]]={in:'09:00'};bulkCheckIn();return sids.every(s=>RS[s]&&RS[s].in)&&RS[sids[0]].in=='09:00'});
