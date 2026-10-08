@@ -546,7 +546,9 @@ function addRoleData(db){
   const todaySids=[...new Set(db.tickets.filter(t=>t.status=='open'&&t.avail<=TODAY).map(t=>t.sid))];
   const NOTES=['요즘 집중이 짧아요. 앞자리에 앉혀 주세요','재시험은 꼭 통과하고 보내 주세요','칭찬을 많이 해 주세요. 자신감이 떨어져 있어요','부모님이 18:30에 데리러 오세요'];
   db.notes=todaySids.slice(0,4).map((sid,i)=>({id:nid('NT'),sid,from:db.students.find(x=>x.id==sid).homeroom,text:NOTES[i],created:addDays(TODAY,-1-i%2)}));
-  db.obs=[];db.riskStatus={};
+  db.obs=[];db.riskStatus={};db.memos=[];
+  // 셔틀: 수업 끝나고 나머지 학습(약 1시간) 뒤 출발. 일부는 도보
+  db.students.forEach(st=>{const h=+db.classes.find(c=>c.id==st.cls).start.slice(0,2)+1;st.shuttle=rnd()<0.2?'도보':pick([`${h}:50`,`${h+1}:10`,`${h+1}:30`])});
   db.shifts={A1:'TT',A2:'MWF'};
 }
 
@@ -997,7 +999,12 @@ function homePage(){
   const asked=(ME.role=='teacher'?myStudents():studs).filter(s=>DB.riskStatus[s.id]?.status=='asked');
   const newTag=s=>{const a=adaptOf(s);return a?` <span class="bd b" style="padding:1px 7px">신규 ${a.week}주</span>`:''};
   const stat=(ringHtml,v,l)=>`<div class="stat">${ringHtml}<div><div class="sv">${v}</div><div class="sl">${l}</div></div></div>`;
-  return `<div class="mb">${picker}</div>
+  const memos=ME.role=='teacher'?DB.memos.filter(m=>m.teacher==ME.id):[];
+  const memoCard=ME.role=='teacher'?`<div class="card mb" style="padding:14px 16px"><div class="row" style="flex-wrap:nowrap"><b style="white-space:nowrap">오늘 메모</b>
+    <select id="memoSid" data-nd style="width:auto;max-width:150px"><option value="">학생 (선택)</option>${myStudents().map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
+    <input id="memoText" data-nd placeholder="쉬는 시간에 한 줄만 — 퇴근 전에 케어 기록으로 정리" onkeydown="if(event.key=='Enter')addMemo()"><button class="btn pri sm" onclick="addMemo()">남기기</button></div>
+    ${memos.map(m=>`<div class="task"><span class="small muted">${md(m.created)}</span>${m.sid?`<b>${esc(ST(m.sid).name)}</b>`:''}<span class="sp" style="font-weight:500">${esc(m.text)}</span><button class="btn sm" onclick="openCare(${m.sid?`'${m.sid}'`:'null'},{finding:${esc(JSON.stringify(m.text))},memoId:'${m.id}'})">케어 기록으로 정리</button><button class="btn sm ghost" onclick="delMemo('${m.id}')">지우기</button></div>`).join('')}</div>`:'';
+  return `<div class="mb">${picker}</div>${memoCard}
   ${asked.length?`<div class="card mb" style="background:var(--blue-soft);box-shadow:inset 0 0 0 1.5px var(--blue)"><div class="row"><span class="tic" style="color:var(--b-ink)">${ic('alert',18)}</span><b>원장님 확인 요청:</b> ${asked.map(s=>`<a onclick="nav('timeline',{sid:'${s.id}'})"><b>${esc(s.name)}</b></a>`).join(', ')}<span class="sp"></span><span class="small">챙긴 뒤 케어 기록을 남기면 원장님 화면에 "담임 챙기는 중"으로 바뀝니다</span></div></div>`:''}
   ${native?'':`<div class="grid g4 mb" style="gap:14px">
     ${stat(ring(p.pr,{size:52,color:p.delayed?COL.r:COL.g,center:''}),pct(p.pr),`진도 ${p.done}/${p.planned}회 · ${p.delayed?'<b style="color:var(--red)">지연</b>':'정상'}`)}
@@ -1053,6 +1060,8 @@ function openNote(sid){
     <div class="mfoot"><button class="btn" onclick="closeModal()">취소</button><button class="btn pri" onclick="saveNote()">남기기</button></div>`);
 }
 function saveNote(){if(!M.text.trim())return toast('당부 내용을 입력해 주세요',1);DB.notes.push({id:nid('NT'),sid:M.sid,from:ME.id,text:M.text.trim(),created:TODAY});DIRTY=true;closeModal();toast('조교 당부를 남겼습니다');render()}
+function addMemo(){const t=$('#memoText').value.trim();if(!t)return toast('메모 내용을 입력해 주세요',1);DB.memos.push({id:nid('MM'),teacher:ME.id,sid:$('#memoSid').value||null,text:t,created:TODAY});DIRTY=true;toast('메모 남김');render()}
+function delMemo(id){DB.memos=DB.memos.filter(m=>m.id!=id);DIRTY=true;render()}
 function quickResult(rid,res){if(res=='worse'&&!confirm('결과를 "악화"로 저장할까요? 원장 위험 학생 판단에 반영됩니다.'))return;const r=DB.care.find(x=>x.id==rid);r.result=res;DIRTY=true;toast(`결과 저장: ${RESULTS[res]}`);render()}
 function actBtn(t){
   if(t.act=='result')return `<button class="btn sm pri" onclick="openResult('${t.rid}')">결과 입력</button>`;
@@ -1083,7 +1092,7 @@ function openCare(sid,pre={},rid){
   if(ME.role=='director'||ME.role=='assistant')return toast('케어 기록은 교사만 입력합니다',1);
   if(rid){const r=DB.care.find(x=>x.id==rid);if(!r||r.teacher!=ME.id)return toast('본인이 쓴 기록만 고칠 수 있습니다',1);
     M={kind:'care',rid,sid:r.sid,area:r.area,type:r.type,action:r.action,finding:r.finding,follow:r.follow,cand:r.cand};M._init=careSnap();return showModal(careModal)}
-  M={kind:'care',sid,area:pre.area||null,type:pre.type||null,action:pre.action||null,finding:pre.finding||'',follow:sid?nextClassDate(ST(sid)):addDays(TODAY,2),cand:true,dkey:pre.dkey};
+  M={kind:'care',sid,area:pre.area||null,type:pre.type||null,action:pre.action||null,finding:pre.finding||'',follow:sid?nextClassDate(ST(sid)):addDays(TODAY,2),cand:true,dkey:pre.dkey,memoId:pre.memoId};
   if(ME.role=='native_teacher'&&M.area&&!NATIVE_AREAS.includes(M.area))M.area=null;
   M._init=careSnap();
   showModal(careModal);
@@ -1119,6 +1128,7 @@ function saveCare(){
   const rec=DB.care.at(-1);
   if(prevRisk=='asked'||(prevLevel!='low'&&['new','acting',undefined].includes(prevRisk))){setRisk(M.sid,M.action=='parent'?'contacted':'acting');rec.riskUndo={prev:prevRisk??null,set:DB.riskStatus[M.sid].status}}
   if(M.dkey)rec.dkey=M.dkey;
+  if(M.memoId)DB.memos=DB.memos.filter(m=>m.id!=M.memoId);
   closeModal();toast(`케어 기록 저장 · ${md(M.follow)}에 결과 확인 알림`);render();
 }
 function deleteCare(rid){
@@ -1268,6 +1278,7 @@ function saveEntry(ssid){
 
 /* ============ 강당 나머지 (F4) ============ */
 let RS={};
+const shuttleKey=st=>st.shuttle=='도보'||!st.shuttle?'99:99':st.shuttle.padStart(5,'0');
 const elapsedMin=(from,now)=>{const m=t=>+t.slice(0,2)*60+ +t.slice(3,5);return Math.max(0,m(now)-m(from))};
 function bulkCheckIn(){
   const t=nowHM();let n=0;
@@ -1290,7 +1301,8 @@ function remedialPage(){
     <div class="stat" style="justify-content:space-between">${ro?'<span class="small muted">입장 → 20·40분 체크 → 결과<br>당일 연장 없음 · 미완은 다음 회차로</span>':`<div><div class="sv">${notIn}명</div><div class="sl">아직 입장 안 함</div></div><button class="btn pri sm" ${notIn?'':'disabled'} onclick="bulkCheckIn()">모두 입장</button>`}</div>
   </div>
   ${ro?`<div class="card in mb"><span class="small">조회 화면입니다. 결과 입력은 <b>조교</b> 역할에서 할 수 있습니다.</span></div>`:sinceCard(by)}
-  <div class="rgrid">${Object.entries(by).map(([sid,ts])=>remCard(sid,ts,ro)).join('')||'<div class="card empty">대기 학생이 없습니다</div>'}</div>
+  <div class="rgrid">${Object.entries(by).sort(([a],[b])=>shuttleKey(ST(a))<shuttleKey(ST(b))?-1:1).map(([sid,ts])=>remCard(sid,ts,ro)).join('')||'<div class="card empty">대기 학생이 없습니다</div>'}</div>
+  ${(()=>{const pend=DB.suggestions.filter(x=>x.status=='pending'&&scope.has(x.sid)&&!by[x.sid]);return pend.length?`<div class="card" style="margin-top:18px"><div class="chead"><h3>담임 확정 대기</h3><span class="bd a">${pend.length}건</span><span class="small muted">담임이 확정하면 위 명단에 올라옵니다. 먼저 온 학생은 자리만 안내해 주세요</span></div>${pend.map(x=>`<div class="task"><b>${esc(stLabel(ST(x.sid)))}</b><span class="sp small" style="font-weight:500">${esc(x.task)}</span><span class="small muted">${US(ST(x.sid).homeroom).name} 선생님</span></div>`).join('')}</div>`:''})()}
   <div class="card" style="margin-top:18px"><div class="chead"><h3>오늘 처리 결과</h3><span class="small muted">담당 교사 화면에 자동 요약됩니다</span></div>
     ${nD?`<div class="tblw"><table class="t"><tr><th>학생</th><th>과제</th><th>결과</th><th>소요</th><th>태도</th><th>추가 과제</th>${ro?'':'<th></th>'}</tr>${tl.map((l,i)=>`<tr><td><b>${esc(stLabel(ST(l.sid)))}</b></td><td>${esc(l.task)}</td><td>${outBadge(l.outcome)}</td><td class="small">${PASS[l.pass]}</td><td class="small">${ATT[l.att]}</td><td class="small">${l.extra?esc(DB.extra.find(e=>e.id==l.extra)?.title)+(l.extraDone?' ✓':''):'–'}</td>${ro?'':`<td style="text-align:right">${tl.findIndex(x=>x.sid==l.sid)==i?`<button class="btn sm ghost" onclick="undoRem('${l.sid}')">되돌리기</button>`:''}</td>`}</tr>`).join('')}</table></div>`:'<div class="empty">아직 없음</div>'}</div>`;
 }
@@ -1319,7 +1331,9 @@ function remCard(sid,ts,ro){
   const out=outOf(r,ts),taps=[r.in,out,r.pass,r.att].filter(Boolean).length;
   const el=r.in?elapsedMin(r.in,nowHM()):0;
   const due20=r.in&&el>=20&&r.c20==null,due40=r.in&&el>=40&&r.c40==null;
-  const head=`<div class="row" style="flex-wrap:nowrap">${avatar(st.name)}<div class="sp" style="min-width:0"><div class="b" style="font-size:15.5px">${esc(stLabel(st))}</div>
+  const left=st.shuttle&&st.shuttle!='도보'?elapsedMin(nowHM(),st.shuttle.padStart(5,'0')):null;
+  const shut=`<span class="bd ${left!=null&&left<=20?'r':left!=null&&left<=120?'a':'n'}" data-shuttle="${esc(st.shuttle||'도보')}">${st.shuttle=='도보'?'도보 귀가':`셔틀 ${st.shuttle}${left!=null&&left>0&&left<=120?` · ${left}분 남음`:''}`}</span>`;
+  const head=`<div class="row" style="flex-wrap:nowrap">${avatar(st.name)}<div class="sp" style="min-width:0"><div class="row" style="gap:6px"><span class="b" style="font-size:15.5px">${esc(stLabel(st))}</span>${shut}</div>
     <div class="row" style="gap:6px;margin-top:4px">${ts.map(t=>`<span class="tpill">${t.from?'<span class="bd a" style="padding:1px 6px">이월</span>':''}${esc(t.task)}</span>`).join('')}</div></div>
     ${ro?'<span class="bd n">대기</span>':`<div class="stepper" title="필수 입력 ${taps}/4">${[0,1,2,3].map(i=>`<i class="${i<taps?'on':''}"></i>`).join('')}</div>`}</div>`;
   const canCancel=ME.role=='director'||(ME.role=='teacher'&&st.homeroom==ME.id);
@@ -1739,6 +1753,13 @@ T('점수 정정 시 재시험 티켓 취소',()=>{ME=US('A1');const ss=DB.sessi
 T('처리된 티켓은 취소 불가',()=>{const t=DB.tickets.find(x=>DB.logs.some(l=>l.ticket==x.id));ME=US('D1');return cancelTicket(t.id)===false&&t.status!='canceled'});
 T('케어 수정 이력',()=>{ME=US('T1');const r=DB.care.find(x=>x.teacher=='T1');const n=DB.care.length,old=r.finding;openCare(r.sid,{},r.id);document.getElementById('mf').value='수정본';saveCare();return r.finding=='수정본'&&r.history.length==1&&r.history[0].before.finding==old&&DB.care.length==n});
 T('지난 기록 삭제 불가',()=>{ME=US('T1');const r=DB.care.find(x=>x.teacher=='T1'&&x.created<TODAY);const n=DB.care.length;return deleteCare(r.id)===false&&DB.care.length==n});
+// 5단계
+T('경과 분',()=>elapsedMin('17:05','17:31')==26);
+T('일괄 입장',()=>{ME=US('A1');const sids=[...new Set(DB.tickets.filter(t=>t.status=='open'&&t.avail<=TODAY).map(t=>t.sid))];RS[sids[0]]={in:'09:00'};bulkCheckIn();return sids.every(s=>RS[s]&&RS[s].in)&&RS[sids[0]].in=='09:00'});
+T('셔틀 순 정렬',()=>{ME=US('A1');const h=remedialPage();const t=[...h.matchAll(/data-shuttle="([^"]+)"/g)].map(m=>m[1]);const k=x=>x=='도보'?'99:99':x;return t.length>3&&t.every((x,i)=>!i||k(t[i-1])<=k(x))});
+T('확정 대기 학생 보임',()=>{DB.suggestions.push({id:'SGz',cls:'C11',sess:'x',sid:'S2',task:'듣기 숙제 완료',reason:'숙제 미완',status:'pending'});ME=US('A1');const h=remedialPage();return h.includes('담임 확정 대기')&&h.includes(ST('S2').name)});
+T('메모 → 케어 정리',()=>{ME=US('T1');DB.memos.push({id:'MM1',teacher:'T1',sid:'S1',text:'발음 흐림',created:TODAY});openCare('S1',{finding:'발음 흐림',memoId:'MM1'});Object.assign(M,{area:'speaking',type:'concept',action:'oneone'});saveCare();
+  return !DB.memos.some(m=>m.id=='MM1')&&DB.care.at(-1).finding=='발음 흐림'});
 // 4단계 검토 수정
 const prepSess=(score)=>{ME=US('A1');const ss=DB.sessions.find(s=>s.pending);const sid=studentsOf(ss.cls)[0].id;ENT.cls=ss.cls;entryPage();
   Object.values(DRAFT[ss.id]).forEach(d=>{d.score=25;Object.keys(d.hw).forEach(k=>d.hw[k]='O')});DRAFT[ss.id][sid].score=score;return{ss,sid}};
