@@ -13,12 +13,12 @@
   color-scheme:light dark;
   --bg:#f2f2f7;--card:#ffffff;--surf:#f2f2f7;--fill:rgba(118,118,128,.12);--fill2:rgba(118,118,128,.20);--fill-strong:#c7c7cc;
   --line:rgba(60,60,67,.14);--line2:rgba(60,60,67,.29);
-  --text:#000000;--muted:#6c6c70;--faint:#8e8e93;
+  --text:#000000;--muted:#5b5b60;--faint:#8e8e93;
   --tint:#007aff;--tint-soft:rgba(0,122,255,.12);--tint-ink:#0062cc;--tint-fill:#0062cc;--on-g:#000;--r-fill:#d70015;--on-r:#fff;
-  --acc:#34c759;--acc2:#30b350;--acc-soft:rgba(52,199,89,.15);--acc-ink:#1e7a35;--g-soft:rgba(52,199,89,.18);--g-mid:rgba(52,199,89,.42);--g-ink:#146c2e;
-  --red:#ff3b30;--red-soft:rgba(255,59,48,.13);--r-ink:#c4261d;
-  --amber:#ff9500;--amber-soft:rgba(255,149,0,.15);--a-ink:#a85c00;
-  --blue:#5856d6;--blue-soft:rgba(88,86,214,.13);--b-ink:#3f3cb8;
+  --acc:#34c759;--acc2:#30b350;--acc-soft:rgba(52,199,89,.15);--acc-ink:#155d27;--g-soft:rgba(52,199,89,.18);--g-mid:rgba(52,199,89,.42);--g-ink:#124f21;
+  --red:#ff3b30;--red-soft:rgba(255,59,48,.13);--r-ink:#a91d16;
+  --amber:#ff9500;--amber-soft:rgba(255,149,0,.15);--a-ink:#7f4500;
+  --blue:#5856d6;--blue-soft:rgba(88,86,214,.13);--b-ink:#3532a3;
   --gray-soft:rgba(118,118,128,.12);
   --glass:rgba(250,250,252,.72);--glass-line:rgba(255,255,255,.6);
   --shadow:0 1px 2px rgba(0,0,0,.04);
@@ -30,12 +30,12 @@
 @media (prefers-color-scheme:dark){:root{
   --bg:#000000;--card:#1c1c1e;--surf:#2c2c2e;--fill:rgba(118,118,128,.24);--fill2:rgba(118,118,128,.32);--fill-strong:#48484a;
   --line:rgba(84,84,88,.45);--line2:rgba(84,84,88,.65);
-  --text:#ffffff;--muted:#98989f;--faint:#8e8e93;
+  --text:#ffffff;--muted:#b6b6bc;--faint:#8e8e93;
   --tint:#0a84ff;--tint-soft:rgba(10,132,255,.2);--tint-ink:#409cff;--tint-fill:#0060df;--on-g:#000;--r-fill:#ff453a;--on-r:#000;
-  --acc:#30d158;--acc2:#30d158;--acc-soft:rgba(48,209,88,.2);--acc-ink:#30d158;--g-soft:rgba(48,209,88,.2);--g-mid:rgba(48,209,88,.45);--g-ink:#30d158;
-  --red:#ff453a;--red-soft:rgba(255,69,58,.2);--r-ink:#ff6961;
+  --acc:#30d158;--acc2:#30d158;--acc-soft:rgba(48,209,88,.2);--acc-ink:#4ade72;--g-soft:rgba(48,209,88,.2);--g-mid:rgba(48,209,88,.3);--g-ink:#7ff0a0;
+  --red:#ff453a;--red-soft:rgba(255,69,58,.2);--r-ink:#ff958e;
   --amber:#ff9f0a;--amber-soft:rgba(255,159,10,.2);--a-ink:#ffb340;
-  --blue:#5e5ce6;--blue-soft:rgba(94,92,230,.24);--b-ink:#9a99ff;
+  --blue:#5e5ce6;--blue-soft:rgba(94,92,230,.24);--b-ink:#bdbcff;
   --glass:rgba(30,30,32,.72);--glass-line:rgba(255,255,255,.08);
   --shadow:none;--shadow-lg:0 12px 40px rgba(0,0,0,.6);
 }}
@@ -114,7 +114,7 @@ h2{font-size:30px;font-weight:700}h3{font-size:17px;font-weight:600}h4{font-size
 .chip{border:0;border-radius:99px;padding:7px 14px;min-height:34px;background:var(--fill);cursor:pointer;font-weight:500;font-size:14px;color:var(--text);white-space:nowrap}
 .chip:hover{background:var(--fill2)}
 .chip.on{color:#fff;background:var(--tint-fill)}
-.chip.on .bd{background:#fff;color:var(--tint-ink)}
+.chip.on .bd{background:#fff;color:var(--tint-fill)}
 .chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-left:6px;vertical-align:middle}
 .hscroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
 /* Segmented control: 회색 트랙 + 흰 썸 */
@@ -136,7 +136,8 @@ label.lb{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:
 .toggle{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:500;font-size:15px}
 .toggle i{width:51px;height:31px;border-radius:99px;background:var(--fill2);position:relative;transition:.2s;flex:none}
 .toggle i:after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.16);transition:.2s}
-.toggle input{display:none}
+.toggle{position:relative}.toggle input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.toggle input:focus-visible+i{outline:3px solid var(--tint);outline-offset:2px}
 .toggle input:checked+i{background:var(--acc)}
 .toggle input:checked+i:after{left:22px}
 
@@ -160,7 +161,7 @@ label.lb{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:
 .todo .tic{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;flex:none}
 .todo .tt{font-weight:500;font-size:15px}.todo .ts{font-size:13px;color:var(--muted)}
 .todo .tc{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--muted)}
-.todo .chev{color:var(--faint);font-size:20px;font-weight:300}
+.todo .chev{color:var(--muted);font-size:20px;font-weight:300}
 .stat{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--r);background:var(--card);box-shadow:var(--shadow)}
 .stat .sv{font-size:22px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}.stat .sl{font-size:13px;color:var(--muted)}
 
@@ -192,7 +193,7 @@ label.lb{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:
 .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
 .flow .st{flex:1;min-width:110px;background:var(--fill);border-radius:10px;padding:8px 11px;font-size:13px;position:relative}
 .flow .st .k{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:2px}
-.flow .ar{display:grid;place-items:center;width:22px;color:var(--faint)}
+.flow .ar{display:grid;place-items:center;width:22px;color:var(--muted)}
 .flowbig{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .flowbig .nd{flex:1;min-width:80px;text-align:center;padding:14px 8px;border-radius:12px;background:var(--fill)}
 .flowbig .nd .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}.flowbig .nd .t{font-size:12px;color:var(--muted)}
@@ -217,7 +218,7 @@ table.t td:first-child{white-space:nowrap}
 table.t .seg{flex-wrap:nowrap}
 table.t tr.click td{cursor:pointer}table.t tr.click:hover td{background:var(--fill)}
 .empty{color:var(--muted);text-align:center;padding:28px;font-size:14px}
-.hwb{width:36px;height:36px;border-radius:9px;border:0;cursor:pointer;font-weight:700;background:var(--fill);color:var(--faint)}
+.hwb{width:36px;height:36px;border-radius:9px;border:0;cursor:pointer;font-weight:700;background:var(--fill);color:var(--muted)}
 .hwb:hover{background:var(--fill2)}
 .hwb.O{color:var(--acc-ink);background:var(--acc-soft)}.hwb.△{color:var(--a-ink);background:var(--amber-soft)}.hwb.X{color:var(--r-ink);background:var(--red-soft)}
 .scin{width:70px!important;text-align:center;font-weight:600}
@@ -244,6 +245,8 @@ details summary:before{content:"›";display:inline-block;margin-right:6px;trans
 .tld{font-size:13px;font-weight:600;color:var(--muted);margin:16px 0 8px;position:relative}
 .tld:before{content:"";position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--card);box-shadow:0 0 0 3px var(--tint)}
 .ev{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border-radius:10px;background:var(--fill);margin-bottom:6px;font-size:14px}
+.ev .flow .st{background:var(--card)}
+.promo .btn{background:var(--card)}
 .ev .ic{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;flex:none;font-size:12px;font-weight:700}
 
 /* ============ sheet(모달) & toast ============ */
@@ -730,7 +733,7 @@ function heatCal(month,counts){
 const rankBadge=r=>`<span class="bd ${RANK[r][1]}">${RANK[r][0]}</span>`;
 const resBadge=r=>r.result?`<span class="bd ${r.result=='improved'?'g':r.result=='same'?'a':'r'}">${RESULTS[r.result]}</span>`:(r.follow<=TODAY?'<span class="bd b">결과 미입력</span>':`<span class="bd n">${md(r.follow)} 확인 예정</span>`);
 const outBadge=o=>`<span class="bd ${o=='done'?'g':o=='partial'?'a':'r'}">${OUTCOME[o]}</span>`;
-const avatar=(name,cls='')=>{const hue=[...name].reduce((a,c)=>a+c.charCodeAt(0),0)%360;const ini=/\s/.test(name)?name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase():name.slice(-2);return `<span class="av ${cls}" style="background:hsl(${hue} 38% 56%)">${esc(ini)}</span>`};
+const avatar=(name,cls='')=>{const hue=[...name].reduce((a,c)=>a+c.charCodeAt(0),0)%360;const ini=/\s/.test(name)?name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase():name.slice(-2);return `<span class="av ${cls}" style="background:hsl(${hue} 42% 31%)">${esc(ini)}</span>`};
 const careFlow=r=>`<div class="flow"><div class="st"><span class="k">발견 · ${AREAS[r.area]}/${TYPES[r.type]}</span>${esc(r.finding)}</div><div class="ar">→</div><div class="st"><span class="k">조치</span>${ACTIONS[r.action]}</div><div class="ar">→</div><div class="st"><span class="k">결과</span>${resBadge(r)} ${r.result_note?`<span class="small muted">${esc(r.result_note)}</span>`:''}</div></div>`;
 
 /* ============ app state / router ============ */
@@ -750,9 +753,14 @@ function login(id){ME=US(id);dismissed=new Set();nav(FIRST[ME.role])}
 function logout(){ME=null;render()}
 function resetDemo(){if(!confirm('입력한 내용이 모두 지워집니다. 초기화할까요?'))return;DIRTY=false;DB=buildData();dismissed=new Set();RS={};DRAFT={};toast('데모 데이터 초기화됨')}
 
+// 키보드 접근: 버튼이 아닌데 누를 수 있는 것(행·카드·이름 링크)에 초점과 역할을 준다
+function a11yFix(root=document){root.querySelectorAll('[onclick]').forEach(e=>{if(['BUTTON','INPUT','SELECT','TEXTAREA','LABEL'].includes(e.tagName))return;
+  if(e.tabIndex<0||!e.hasAttribute('tabindex'))e.tabIndex=0;if(!e.getAttribute('role'))e.setAttribute('role',e.tagName=='A'?'link':'button')})}
+document.addEventListener('keydown',e=>{const t=e.target;if(!(t instanceof Element)||!t.hasAttribute('onclick')||['BUTTON','INPUT','SELECT','TEXTAREA'].includes(t.tagName))return;
+  if(e.key=='Enter'||(e.key==' '&&t.getAttribute('role')=='button')){e.preventDefault();t.click()}});
 function render(){
   const app=$('#app');
-  if(!ME){app.innerHTML=loginView();return}
+  if(!ME){app.innerHTML=loginView();a11yFix(app);return}
   let body;
   try{body=(PAGES[R.page]||(()=>''))(R.p)}catch(e){console.error(e);body=`<div class="card">오류: ${esc(e.message)}</div>`}
   const d=D(TODAY);
@@ -766,6 +774,7 @@ function render(){
       <span class="datechip">${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()} (${WD[d.getDay()]})</span>
       <div class="me">${avatar(ME.name)}<div><div class="nm">${esc(ME.name)}</div><div class="rl">${ROLE[ME.role]}</div></div><button class="btn sm" onclick="logout()" title="역할 바꾸기">${ic('swap',14)}역할</button></div></div>
     ${body}</main></div>`;
+  a11yFix(app);
 }
 
 /* ============ login ============ */
@@ -904,7 +913,7 @@ function dashBrief(studs,hcls){
   </div>
   <div class="grid g2">
     <div class="card"><div class="chead"><h3>이번 학기 퇴원</h3><span class="bd n">${wd.length}명</span></div>
-      <div class="small" style="margin-bottom:10px">${wd.length} 명 중 <b style="color:var(--red)">${withSig}명</b>은 그만두기 전에 신호가 있었습니다.</div>
+      <div class="small" style="margin-bottom:10px">${wd.length} 명 중 <b style="color:var(--r-ink)">${withSig}명</b>은 그만두기 전에 신호가 있었습니다.</div>
       ${wd.map(w=>`<div class="task" style="flex-wrap:wrap"><b>${esc(w.name)}</b><span class="small muted">${w.grade} · ${US(w.teacher).name} · ${md(w.date)} · 등록 ${w.weeks}주</span><span class="sp"></span><span class="bd n">${esc(w.reason)}</span>${w.signals.map(x=>`<span class="bd r">${esc(x)}</span>`).join('')}</div>`).join('')}</div>
     <div class="card"><div class="chead"><h3>어제 이후 새로 생긴 일</h3><span class="small muted">${md(y)} ~ 오늘</span></div>
       ${feed.length?feed.slice(0,12).map(e=>`<div class="todo" ${e.sid?`onclick="nav('timeline',{sid:'${e.sid}'})"`:''} style="padding:9px 8px"><span class="bd ${e.c}" style="min-width:44px;justify-content:center">${md(e.d)}</span><span class="sp">${esc(e.t)}</span>${e.sid?'<span class="chev">›</span>':''}</div>`).join(''):'<div class="empty">새로 생긴 일이 없습니다</div>'}</div>
@@ -1007,7 +1016,7 @@ function homePage(){
   return `<div class="mb">${picker}</div>${memoCard}
   ${asked.length?`<div class="card mb" style="background:var(--blue-soft);box-shadow:inset 0 0 0 1.5px var(--blue)"><div class="row"><span class="tic" style="color:var(--b-ink)">${ic('alert',18)}</span><b>원장님 확인 요청:</b> ${asked.map(s=>`<a onclick="nav('timeline',{sid:'${s.id}'})"><b>${esc(s.name)}</b></a>`).join(', ')}<span class="sp"></span><span class="small">챙긴 뒤 케어 기록을 남기면 원장님 화면에 "담임 챙기는 중"으로 바뀝니다</span></div></div>`:''}
   ${native?'':`<div class="grid g4 mb" style="gap:14px">
-    ${stat(ring(p.pr,{size:52,color:p.delayed?COL.r:COL.g,center:''}),pct(p.pr),`진도 ${p.done}/${p.planned}회 · ${p.delayed?'<b style="color:var(--red)">지연</b>':'정상'}`)}
+    ${stat(ring(p.pr,{size:52,color:p.delayed?COL.r:COL.g,center:''}),pct(p.pr),`진도 ${p.done}/${p.planned}회 · ${p.delayed?'<b style="color:var(--r-ink)">지연</b>':'정상'}`)}
     ${stat(ring(remN?remDone/remN:0,{size:52,center:''}),remN+'명',`오늘 나머지 · 완료 ${remDone}`)}
     ${stat(ring(results.length?0:1,{size:52,color:COL.b,center:''}),results.length+'건','결과 입력 대기')}
     ${stat(ring(sugg.length?0:1,{size:52,color:COL.a,center:''}),sugg.length+'건','나머지 제안 확정 대기')}
@@ -1018,7 +1027,7 @@ function homePage(){
     <div class="card"><div class="chead"><h3>오늘 챙길 학생</h3>${[2,3,4].map(r=>`<span class="bd ${RANK[r][1]}">${RANK[r][0]} ${cnt[r]}</span>`).join('')}</div>
       ${top.length?top.map(({st,top:t,rest})=>`<div class="ci"><div class="rk">${rankBadge(t.rank)}</div>${avatar(st.name)}
         <div class="main2"><div class="nm"><a onclick="nav('timeline',{sid:'${st.id}'})">${esc(st.name)}</a></div><div class="why" title="${esc(t.text)}">${esc(t.text)}</div>${rest.length?`<div class="more" title="${esc(rest.map(x=>x.text).join(' / '))}">+ ${rest.map(x=>esc(x.text.split(' · ')[0].split(' — ')[0])).join(' / ')}</div>`:''}</div>
-        <div class="acts">${canW?actBtn(t):''}${canW?`<button class="btn icon ghost" title="확인함 (오늘 목록에서 빼기)" onclick="dismiss('${t.key}')">${ic('check',16)}</button>`:''}</div></div>`).join(''):'<div class="empty">오늘 챙길 학생이 없습니다 👍</div>'}
+        <div class="acts">${canW?actBtn(t):''}${canW?`<button class="btn sm ghost" title="오늘 목록에서 빼기" onclick="dismiss('${t.key}')">${ic('check',14)}확인함</button>`:''}</div></div>`).join(''):'<div class="empty">오늘 챙길 학생이 없습니다 👍</div>'}
       <div class="row" style="margin-top:8px">${items.length>top.length?`<span class="small muted">외 ${items.length-top.length}명은 다음 순위</span>`:''}<span class="sp"></span>
       ${(()=>{const ids=new Set(studs.map(s=>s.id)),n=[...dismissed].filter(k=>ids.has(k.split('|')[0])).length;return n?`<button class="btn sm ghost" onclick="unhide('${c.id}')">숨긴 항목 ${n}개 다시 보기</button>`:''})()}</div></div>
 
@@ -1081,7 +1090,7 @@ function confirmSug(cid,issue){
 /* ============ modals ============ */
 let M={},MF=null;
 function showModal(fn){MF=fn;rm()}
-function rm(){$('#modal').innerHTML=MF?`<div class="mbg" onclick="if(event.target==this)tryClose()"><div class="modal">${MF()}</div></div>`:''}
+function rm(){setTimeout(()=>a11yFix($('#modal')));$('#modal').innerHTML=MF?`<div class="mbg" onclick="if(event.target==this)tryClose()"><div class="modal">${MF()}</div></div>`:''}
 function closeModal(){MF=null;rm()}
 const careSnap=()=>JSON.stringify([M.area,M.type,(M.finding||'').trim(),M.action]);
 function modalDirty(){return M.kind=='care'&&careSnap()!==M._init}
@@ -1622,9 +1631,9 @@ function reportPage(){
    </div>
    <div class="card" style="align-self:start"><div class="chead"><h3>AI 초안 코멘트</h3><span id="apvbadge">${cm.approvedBy?`<span class="bd g">승인됨 · ${US(cm.approvedBy).name}</span>`:'<span class="bd a">검토 대기</span>'}</span></div>
      <div class="small muted" style="margin-bottom:10px">데모에서는 템플릿으로 생성합니다. 실제는 해당 학생 기록만 Claude API로 보내 생성하며, 승인 전에는 학부모에게 나가지 않습니다.</div>
-     <div id="negwarn">${negWarn(parentNegHits(REP.sid,REP.month))}</div>
      <textarea rows="13" oninput="draftInput('${key}',this.value)">${esc(cm.draft)}</textarea>
-     <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn" onclick="DIRTY=true;DB.comments['${key}'].draft=aiDraft(bundle(REP.sid,REP.month));render()">다시 생성</button><button class="btn pri" onclick="DIRTY=true;DB.comments['${key}'].approvedBy=ME.id;toast('승인 완료');render()">${ic('check',14)}승인</button></div></div>
+     <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn" onclick="DIRTY=true;DB.comments['${key}'].draft=aiDraft(bundle(REP.sid,REP.month));render()">다시 생성</button><button class="btn pri" onclick="DIRTY=true;DB.comments['${key}'].approvedBy=ME.id;toast('승인 완료');render()">${ic('check',14)}승인</button></div>
+     <div id="negwarn" style="margin-top:12px">${negWarn(parentNegHits(REP.sid,REP.month))}</div></div>
   </div>`;
 }
 // 다시 그리지 않고 고친다: 다시 그리면 바로 다음 버튼 클릭이 사라짐
@@ -1753,6 +1762,21 @@ T('점수 정정 시 재시험 티켓 취소',()=>{ME=US('A1');const ss=DB.sessi
 T('처리된 티켓은 취소 불가',()=>{const t=DB.tickets.find(x=>DB.logs.some(l=>l.ticket==x.id));ME=US('D1');return cancelTicket(t.id)===false&&t.status!='canceled'});
 T('케어 수정 이력',()=>{ME=US('T1');const r=DB.care.find(x=>x.teacher=='T1');const n=DB.care.length,old=r.finding;openCare(r.sid,{},r.id);document.getElementById('mf').value='수정본';saveCare();return r.finding=='수정본'&&r.history.length==1&&r.history[0].before.finding==old&&DB.care.length==n});
 T('지난 기록 삭제 불가',()=>{ME=US('T1');const r=DB.care.find(x=>x.teacher=='T1'&&x.created<TODAY);const n=DB.care.length;return deleteCare(r.id)===false&&DB.care.length==n});
+// 6단계 6-1 접근성
+const _lum=c=>{const m=c.match(/[\d.]+/g).map(Number);return [0,1,2].map(i=>{let v=m[i]/255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0)};
+const _a=c=>{const m=c.match(/[\d.]+/g).map(Number);return m.length>3?m[3]:1};
+const _mix=(f,b)=>{const a=_a(f),x=f.match(/[\d.]+/g).map(Number),y=b.match(/[\d.]+/g).map(Number);return `rgb(${[0,1,2].map(i=>x[i]*a+y[i]*(1-a)).join(',')})`};
+const _bg=el=>{const L=[];for(let e=el;e;e=e.parentElement){const c=getComputedStyle(e).backgroundColor;if(_a(c)>0)L.push(c);if(_a(c)>=1)break}let bg=getComputedStyle(document.body).backgroundColor;for(const l of L.reverse())bg=_mix(l,bg);return bg};
+function lowContrast(){const bad=[];document.querySelectorAll('#app *').forEach(el=>{if(![...el.childNodes].some(n=>n.nodeType==3&&n.textContent.trim()))return;const st=getComputedStyle(el);if(st.display=='none'||st.visibility=='hidden'||+st.opacity<.5||el.closest('[disabled]'))return;
+  const bg=_bg(el),fg=_mix(st.color,bg),x=_lum(fg),y=_lum(bg),r=(Math.max(x,y)+.05)/(Math.min(x,y)+.05),fs=parseFloat(st.fontSize),big=fs>=24||(fs>=18.66&&+st.fontWeight>=700);
+  if(r<(big?3:4.5))bad.push(`${el.className||el.tagName}:${el.textContent.trim().slice(0,8)}:${r.toFixed(2)}`)});return bad}
+const PAGES6=[['D1','dashboard'],['T1','home'],['A1','remedial'],['A1','entry'],['D1','timeline'],['D1','report'],['N1','showcase'],['D1','admin']];
+T('글자 대비 4.5 이상 (전 화면)',()=>{const bad=[];for(const [u,pg] of PAGES6){ME=US(u);R=pg=='timeline'?{page:pg,p:{sid:'S1'}}:{page:pg,p:{}};render();bad.push(...lowContrast())}ME=null;R={page:'login',p:{}};render();if(bad.length)console.log('LOW',[...new Set(bad)].slice(0,12).join(' | '));return bad.length==0});
+T('누르는 것은 모두 키보드로',()=>{let miss=0;for(const [u,pg] of PAGES6){ME=US(u);R=pg=='timeline'?{page:pg,p:{sid:'S1'}}:{page:pg,p:{}};render();a11yFix();
+  miss+=[...document.querySelectorAll('#app [onclick]')].filter(e=>!['BUTTON','INPUT','SELECT','TEXTAREA'].includes(e.tagName)&&!(e.tabIndex>=0&&e.getAttribute('role'))).length}ME=null;render();return miss==0});
+T('토글도 키보드 초점',()=>{ME=US('D1');R={page:'admin',p:{}};ADM='extra';render();const i=document.querySelector('.toggle input');ADM='settings';const ok=i&&getComputedStyle(i).display!='none';ME=null;render();return ok});
+T('확인함 버튼에 글자',()=>{ME=US('T1');HOMECLS='C11';return /onclick="dismiss\([^"]*\)"[^>]*>[^<]*(<svg[\s\S]*?<\/svg>)?\s*확인함/.test(homePage())});
+T('부정 표현 경고는 버튼 아래',()=>{ME=US('D1');REP.sid='S1';REP.month='2026-09';const h=reportPage();return h.indexOf('id="negwarn"')>h.indexOf('>승인<')||h.indexOf('id="negwarn"')>h.indexOf('승인</button>')});
 // 5단계
 T('경과 분',()=>elapsedMin('17:05','17:31')==26);
 T('일괄 입장',()=>{ME=US('A1');const sids=[...new Set(DB.tickets.filter(t=>t.status=='open'&&t.avail<=TODAY).map(t=>t.sid))];RS[sids[0]]={in:'09:00'};bulkCheckIn();return sids.every(s=>RS[s]&&RS[s].in)&&RS[sids[0]].in=='09:00'});
