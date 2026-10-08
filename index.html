@@ -447,7 +447,7 @@ function buildData(){
       const pat=PAT[k%PAT.length];k++;
       let ab=22+rnd()*6.5;
       if(pat=='fail2')ab=26;if(pat=='rise')ab=21;if(pat=='slump')ab=27.5;if(pat=='remedial3'||pat=='fastpass')ab=21.5;
-      db.students.push({id:'S'+k,name:pick(SUR)+pick(GIV),grade:c.grade,school:pick(c.grade[0]=='초'?['한빛초','새솔초','푸른초']:['대림중','하늘중']),
+      db.students.push({id:'S'+k,name:pick(SUR)+pick(GIV),grade:c.grade,school:pick(c.grade[0]=='초'?['고잔초','와동초','선부초']:['단원중','와동중']),
         cls:c.id,homeroom:c.teacher,nclass:'NC'+(1+k%4),status:'재원',phone:`010-${ri(2000,9999)}-${ri(1000,9999)}`,pattern:pat,ability:ab,level:c.level,subjects:['담임 영어','원어민']});
     }
   });
@@ -978,6 +978,56 @@ function dashboard(){
   ${DTAB=='brief'?dashBrief(studs,hcls):DTAB=='risk'?dashRisk(risk):DTAB=='progress'?dashProgress(hcls,delayed):DTAB=='records'?dashRecords(rows):dashOverview(set,studs,start,careP,teachers)}`;
 }
 // 원장 아침 브리핑: 퇴원 위험 · 신규생 적응 · 반별 상태 · 선생님별 놓치는 것 · 최근 퇴원 · 어제 이후 생긴 일
+/* ============ 학교 정보 (NEIS 학사일정 · 학교알리미 학생 수) — 서버 함수 api/school.mjs ============ */
+// 키는 버셀 서버에만 있다. 화면은 /api/school?s=학교 로만 부른다. 파일로 열면(내 컴퓨터) 부를 수 없음.
+const REAL_SCHOOLS=['고잔초','와동초','선부초','단원중','와동중'];
+let SCH={};
+function loadSchool(name){
+  if(SCH[name])return SCH[name]; // 실패도 저장 — 다시 그릴 때마다 재요청하지 않게 (다시 시도는 retrySchool)
+  if(!/^https?:$/.test(location.protocol))return SCH[name]={st:'local'}; // 파일·미리보기는 서버 함수 없음
+  SCH[name]={st:'loading'};
+  fetch('api/school?s='+encodeURIComponent(name)+'&from='+TODAY).then(r=>r.ok?r.json():Promise.reject(r.status))
+    .then(d=>{SCH[name]={st:'ok',d};schoolChanged()}).catch(()=>{SCH[name]={st:'err'};schoolChanged()});
+  return SCH[name];
+}
+function schoolChanged(){if(MF&&M.kind=='school')rm();else if(!MF&&ME&&R.page=='dashboard'&&DTAB=='brief')render()}
+function retrySchool(name){delete SCH[name];loadSchool(name);MF?rm():render()}
+const schoolLink=n=>REAL_SCHOOLS.includes(n)?`<a onclick="event.stopPropagation();openSchool('${n}')" title="${n} 학사일정·학생 수 보기">${esc(n)}</a>`:esc(n);
+const dday=d=>{const n=diff(d,TODAY);return n==0?'D-DAY':n>0?'D-'+n:'D+'+(-n)};
+const gradeNo=g=>+g.slice(1);
+const SCH_LOCAL=`<div class="callout"><span class="ci2">🔌</span><div>학교 정보는 배포 주소 <b>academy-records.vercel.app</b>에서만 불러옵니다. 내 컴퓨터에서 파일로 열면 보이지 않습니다.</div></div>`;
+function schoolState(x,name){return x.st=='local'?SCH_LOCAL:x.st=='loading'?'<div class="empty">학교 정보를 불러오는 중…</div>'
+  :x.st=='err'?`<div class="empty">학교 정보를 불러오지 못했어요 <button class="btn sm" onclick="retrySchool('${name}')">다시 시도</button></div>`:''}
+function openSchool(name){if(!REAL_SCHOOLS.includes(name))return;M={kind:'school',name};loadSchool(name);showModal(schoolModal)}
+function schoolModal(){
+  const name=M.name,x=SCH[name]||loadSchool(name),ours=DB.students.filter(s=>s.school==name);
+  const head=`<div class="chead"><h3>🏫 ${esc(x.d?.full||name)}</h3><span class="bd b">우리 학원 ${ours.length}명</span><button class="btn icon ghost" onclick="closeModal()" aria-label="닫기">✕</button></div>`;
+  if(x.st!='ok')return head+schoolState(x,name);
+  const {info,schedule,errors}=x.d;
+  const infoH=info?`<div class="row" style="gap:8px;margin-bottom:10px"><div class="stat"><div><div class="sv num">${info.students??'–'}명</div><div class="sl">전교생</div></div></div><div class="stat"><div><div class="sv num">${info.classes??'–'}개</div><div class="sl">학급</div></div></div><div class="stat"><div><div class="sv num">${info.perClass??'–'}명</div><div class="sl">학급당 학생</div></div></div></div>
+    <div class="tblw"><table class="t"><tr><th>학년</th><th>학급</th><th>학생</th><th>우리 학원</th></tr>${info.byGrade.map(g=>`<tr><td>${g.grade}학년</td><td class="num">${g.classes??'–'}</td><td class="num">${g.students??'–'}</td><td class="num">${ours.filter(s=>gradeNo(s.grade)==g.grade).length}</td></tr>`).join('')}</table></div>
+    <div class="small muted" style="margin-top:6px">학교알리미 ${info.year}년 공시 기준</div>`
+    :`<div class="empty">학생 수 정보가 없습니다${errors?.info?` <span class="small">(${esc(errors.info)})</span>`:''}</div>`;
+  const up=(schedule||[]).filter(e=>e.date>=TODAY).slice(0,20);
+  const schH=schedule?(up.length?up.map(e=>`<div class="todo" style="cursor:default;min-height:40px"><span class="bd ${e.exam?'r':e.off?'n':'b'}" style="min-width:58px;justify-content:center">${dday(e.date)}</span><span class="small muted num" style="width:64px">${md(e.date)} (${WD[D(e.date).getDay()]})</span><span class="sp">${e.exam?`<b>${esc(e.event)}</b> <span class="bd r">시험</span>`:esc(e.event)}</span>${e.grades.length&&e.grades.length<(name.endsWith('초')?6:3)?`<span class="small muted">${e.grades.join('·')}학년</span>`:''}</div>`).join(''):'<div class="empty">앞으로 120일 안에 등록된 일정이 없습니다</div>')
+    :`<div class="empty">학사일정을 불러오지 못했어요${errors?.schedule?` <span class="small">(${esc(errors.schedule)})</span>`:''}</div>`;
+  return head+`<h4 style="margin:4px 0 10px">학생 수 · 학급 현황</h4>${infoH}<h4 style="margin:20px 0 6px">다가오는 학사일정</h4>${schH}
+    <div class="small muted" style="margin-top:14px">출처: NEIS 교육정보 개방 포털 · 학교알리미</div>`;
+}
+// 원장 아침 브리핑: 45일 안의 학교 시험
+function schoolExams(){
+  const names=REAL_SCHOOLS.filter(n=>DB.students.some(s=>s.school==n)),xs=names.map(n=>[n,loadSchool(n)]);
+  const g={};xs.forEach(([n,x])=>x.st=='ok'&&(x.d.schedule||[]).filter(e=>e.exam&&e.date>=TODAY&&diff(e.date,TODAY)<=45).forEach(e=>{const k=n+'|'+e.event;
+    if(!g[k])g[k]={n,event:e.event,from:e.date,to:e.date,grades:new Set()};g[k].to=e.date>g[k].to?e.date:g[k].to;g[k].from=e.date<g[k].from?e.date:g[k].from;e.grades.forEach(x=>g[k].grades.add(x))}));
+  return{xs,list:Object.values(g).map(e=>({...e,ours:DB.students.filter(s=>s.school==e.n&&(!e.grades.size||e.grades.has(gradeNo(s.grade)))).length})).sort((a,b)=>a.from<b.from?-1:1)};
+}
+function schoolExamCard(){
+  const {xs,list}=schoolExams(),local=xs.some(([,x])=>x.st=='local'),loading=xs.filter(([,x])=>x.st=='loading').length,err=xs.filter(([n,x])=>x.st=='err'||(x.st=='ok'&&!x.d.schedule));
+  return `<div class="card mb"><div class="chead"><h3>다가오는 학교 시험</h3><span class="small muted">45일 안 · 학교를 누르면 학사일정·학생 수</span></div>
+    ${local?SCH_LOCAL:list.length?list.map(e=>`<div class="todo" onclick="openSchool('${e.n}')"><span class="bd r" style="min-width:58px;justify-content:center">${dday(e.from)}</span><div class="sp"><div class="tt">${esc(e.n)} · ${esc(e.event)}</div><div class="ts">${md(e.from)}${e.to!=e.from?' ~ '+md(e.to):''} · 우리 학생 ${e.ours}명</div></div><span class="chev">›</span></div>`).join('')
+      :loading?'<div class="empty">학교 일정을 불러오는 중…</div>':'<div class="empty">45일 안에 잡힌 학교 시험이 없습니다</div>'}
+    ${!local&&err.length?`<div class="small muted" style="margin-top:8px">${err.map(([n])=>n).join('·')} 일정을 불러오지 못했어요 <button class="btn sm" onclick="${err.map(([n])=>`retrySchool('${n}')`).join(';')}">다시 시도</button></div>`:''}</div>`;
+}
 let CHV='table';
 const churnSel=s=>`<select data-nd aria-label="${esc(s.name)} 처리 상태" style="width:auto;padding:6px 28px 6px 10px;font-size:12px" onchange="setRisk('${s.id}',this.value);render()">${Object.entries(RSTAT).map(([k,[l]])=>`<option value="${k}" ${(DB.riskStatus[s.id]?.status||'new')==k?'selected':''}>${l}</option>`).join('')}</select>`;
 function churnBoard(ch){return `<div class="board" data-board>${Object.entries(RSTAT).map(([k,[l,c]])=>{const xs=ch.filter(({s})=>(DB.riskStatus[s.id]?.status||'new')==k);
@@ -1015,6 +1065,7 @@ function dashBrief(studs,hcls){
         <div class="row" style="flex-wrap:nowrap;margin-top:6px;gap:8px"><span class="small b" style="width:44px">${a.week}주차</span><div class="sp">${meter(a.week/DB.settings.newWeeks,COL.b)}</div></div>
         <div class="small muted" style="margin-top:4px">출석 ${pct(a.att)} · 숙제 ${pct(a.hw)} · 단어 통과 ${pct(a.pass)} · 담임 관찰 ${a.care}건</div></div>`).join('')+(nw.length>8?`<div class="small muted" style="margin-top:8px">외 ${nw.length-8}명 (주의·관찰 필요 먼저 표시)</div>`:''):'<div class="empty">최근 등록한 학생이 없습니다</div>'}</div>
   </div>
+  ${schoolExamCard()}
   <div class="grid g2 mb">
     <div class="card"><div class="chead"><h3>반별 상태</h3><span class="small muted">최근 4주 · 초록 좋음 / 주황 주의 / 빨강 확인</span></div>
       <div class="tblw"><table class="t"><tr><th>반</th><th>출석</th><th>숙제</th><th>단어 통과</th><th>나머지 완료</th><th>진도</th></tr>
@@ -1064,7 +1115,7 @@ function dashOverview(set,studs,start,careP,teachers){
 }
 function dashRisk(risk){
   return `<div class="card"><div class="chead"><h3>위험 학생</h3><span class="bd r">${risk.length}명</span><span class="small muted">기준: 나머지 미완 ${DB.settings.incompleteRisk}회 · 4주 평균 ${DB.settings.riskDropPct}%↓ · 악화 ${DB.settings.worseRisk}건 · 공백 ${DB.settings.riskGapDays}일</span></div>
-    ${risk.length?`<div class="tblw"><table class="t"><tr><th>학생</th><th>반 · 담임</th><th>사유</th><th>단어 추이</th></tr>${risk.map(({s,r})=>`<tr class="click" onclick="nav('timeline',{sid:'${s.id}'})"><td><div class="row" style="gap:10px;flex-wrap:nowrap">${avatar(s.name)}<div><b>${esc(s.name)}</b><div class="small muted">${s.grade} · ${s.school}</div></div></div></td><td class="small">${esc(CL(s.cls).name)}<div class="muted">${US(s.homeroom).name}</div></td><td>${r.map(([t,c])=>`<span class="bd ${c}">${t}</span>`).join(' ')}</td><td>${spark(scoresOf(s.id).slice(-10).map(x=>x.score),{ref:DB.settings.pass})}</td></tr>`).join('')}</table></div>`:'<div class="empty">위험 학생 없음</div>'}</div>`;
+    ${risk.length?`<div class="tblw"><table class="t"><tr><th>학생</th><th>반 · 담임</th><th>사유</th><th>단어 추이</th></tr>${risk.map(({s,r})=>`<tr class="click" onclick="nav('timeline',{sid:'${s.id}'})"><td><div class="row" style="gap:10px;flex-wrap:nowrap">${avatar(s.name)}<div><b>${esc(s.name)}</b><div class="small muted">${s.grade} · ${schoolLink(s.school)}</div></div></div></td><td class="small">${esc(CL(s.cls).name)}<div class="muted">${US(s.homeroom).name}</div></td><td>${r.map(([t,c])=>`<span class="bd ${c}">${t}</span>`).join(' ')}</td><td>${spark(scoresOf(s.id).slice(-10).map(x=>x.score),{ref:DB.settings.pass})}</td></tr>`).join('')}</table></div>`:'<div class="empty">위험 학생 없음</div>'}</div>`;
 }
 function dashProgress(hcls,delayed){
   return `<div class="grid g2"><div class="card"><div class="chead"><h3>반별 진도</h3><span class="legend"><span><i style="background:var(--acc)"></i>진도</span><span><i style="background:var(--fill-strong)"></i>경과</span></span></div>
@@ -1150,7 +1201,7 @@ function homePage(){
       <div class="tblw"><table class="t"><tr><th>학생</th>${native?'<th>9월 대표작</th><th>10월 대표작</th>':'<th>단어 추이</th><th>숙제 (4주)</th>'}<th>케어</th><th></th></tr>
       ${studs.map(s=>{const sc=scoresOf(s.id);const hw=DB.hw.filter(h=>h.sid==s.id&&h.date>addDays(TODAY,-28));const hr=hw.length?hw.filter(h=>h.status=='O').length/hw.length:0;const nc=DB.care.filter(r=>r.sid==s.id).length;
         const sh=m=>{const x=DB.showcase.find(z=>z.sid==s.id&&z.month==m);return x?`<span class="bd ${x.kind=='essay'?'b':'g'}">${x.kind=='essay'?'에세이':'스피킹'}</span>`:'<span class="bd n">미선택</span>'};
-        return `<tr><td><a onclick="nav('timeline',{sid:'${s.id}'})"><b>${esc(s.name)}</b></a>${newTag(s)} <span class="small muted">${s.school}</span></td>
+        return `<tr><td><a onclick="nav('timeline',{sid:'${s.id}'})"><b>${esc(s.name)}</b></a>${newTag(s)} <span class="small muted">${schoolLink(s.school)}</span></td>
         ${native?`<td>${sh('2026-09')}</td><td>${sh('2026-10')}</td>`:`<td><div class="row" style="flex-wrap:nowrap;gap:8px">${spark(sc.slice(-10).map(x=>x.score),{ref:DB.settings.pass})}<span class="small b">${sc.at(-1)?.score??'–'}</span></div></td><td><div class="row" style="flex-wrap:nowrap;gap:8px">${meter(hr,hr<.75?COL.a:COL.g)}<span class="small">${pct(hr)}</span></div></td>`}
         <td class="small">${nc}건</td><td style="white-space:nowrap;text-align:right">${canW?`<button class="btn sm" onclick="openCare('${s.id}')">케어</button> `:''}${(canW||ME.role=='director')&&!native?`<button class="btn sm" onclick="openTicket('${s.id}')">티켓</button>`:''}${canW&&!native?` <button class="btn sm" onclick="openNote('${s.id}')">당부</button>`:''}</td></tr>`}).join('')}</table></div></div>
    </div>
@@ -1537,7 +1588,7 @@ function studentsPage(){
   const list=myStudents();
   return `<div class="card"><div class="chead"><h3>학생 ${list.length}명</h3><div style="width:260px"><input data-nd placeholder="이름·학교·반 검색" oninput="filterRows(this.value)"></div></div>
   <div class="tblw"><table class="t" id="stbl"><tr><th>학생</th><th>학년 · 학교</th><th>반</th><th>담임</th><th>단어 추이</th><th>위험</th></tr>
-  ${list.map(s=>`<tr class="click" data-q="${esc(s.name+s.school+CL(s.cls).name+s.grade)}" onclick="nav('timeline',{sid:'${s.id}'})"><td><div class="row" style="gap:8px;flex-wrap:nowrap">${avatar(s.name)}<b>${esc(s.name)}</b></div></td><td class="small">${s.grade} · ${s.school}</td><td class="small">${esc(CL(s.cls).name)}</td><td class="small">${US(s.homeroom).name}</td><td>${spark(scoresOf(s.id).slice(-10).map(x=>x.score),{ref:DB.settings.pass})}</td><td>${riskOf(s).map(([t,c])=>`<span class="bd ${c}">${t}</span>`).join(' ')}</td></tr>`).join('')}</table></div></div>`;
+  ${list.map(s=>`<tr class="click" data-q="${esc(s.name+s.school+CL(s.cls).name+s.grade)}" onclick="nav('timeline',{sid:'${s.id}'})"><td><div class="row" style="gap:8px;flex-wrap:nowrap">${avatar(s.name)}<b>${esc(s.name)}</b></div></td><td class="small">${s.grade} · ${schoolLink(s.school)}</td><td class="small">${esc(CL(s.cls).name)}</td><td class="small">${US(s.homeroom).name}</td><td>${spark(scoresOf(s.id).slice(-10).map(x=>x.score),{ref:DB.settings.pass})}</td><td>${riskOf(s).map(([t,c])=>`<span class="bd ${c}">${t}</span>`).join(' ')}</td></tr>`).join('')}</table></div></div>`;
 }
 function filterRows(q){document.querySelectorAll('#stbl tr[data-q]').forEach(tr=>tr.style.display=tr.dataset.q.includes(q)?'':'none')}
 const deny=()=>`<div class="card empty">이 화면은 권한이 없습니다. (조교는 성적 이력·케어 기록·상담 내용을 볼 수 없습니다)</div>`;
@@ -1562,7 +1613,7 @@ function timelinePage({sid}){
   const canW=ME.role!='director';
   return `<div class="grid gside">
    <div class="stack">
-    <div class="card" style="text-align:center">${avatar(st.name,'lg')}<h3 style="margin-top:12px;font-size:19px">${esc(st.name)}</h3><div class="small muted">${st.grade} · ${st.school}</div>
+    <div class="card" style="text-align:center">${avatar(st.name,'lg')}<h3 style="margin-top:12px;font-size:19px">${esc(st.name)}</h3><div class="small muted">${st.grade} · ${schoolLink(st.school)}</div>
       <div class="row" style="justify-content:center;margin-top:10px">${(()=>{const c=churnOf(st),a=adaptOf(st);return `<span class="bd ${CHURN[c.level][1]}">퇴원 위험 ${CHURN[c.level][0]} ${c.score}</span>${a?`<span class="bd b">신규 ${a.week}주차 · ${a.status[0]}</span>`:''}`})()}</div>
       <div class="row" style="justify-content:center;margin-top:6px;gap:4px">${churnOf(st).reasons.map(([t,c])=>`<span class="bd ${c}">${t}</span>`).join('')||'<span class="small muted">걱정할 신호 없음</span>'}</div>
       <div class="stack" style="gap:8px;margin-top:16px;text-align:left;font-size:13px">
@@ -1816,7 +1867,7 @@ function adminPage(){
   if(ADM=='users')return tab+`<div class="card"><div class="chead"><h3>사용자</h3><span class="small muted">퇴사 조교 계정은 즉시 비활성화</span></div>
     <div class="tblw"><table class="t"><tr><th>이름</th><th>역할</th><th>활성</th></tr>${DB.users.map(u=>`<tr><td><div class="row" style="gap:8px">${avatar(u.name)}<b>${esc(u.name)}</b></div></td><td>${ROLE[u.role]}</td><td><label class="toggle"><input type="checkbox" ${u.active?'checked':''} ${u.id==ME.id?'disabled':''} onchange="DB.users.find(x=>x.id=='${u.id}').active=this.checked;toast(this.checked?'활성화':'비활성화')"><i></i></label></td></tr>`).join('')}</table></div></div>`;
   return tab+`<div class="card"><div class="chead"><h3>학생 ${DB.students.length}명 · 반 ${DB.classes.length}개</h3><button class="btn" onclick="toast('데모에서는 CSV 가져오기가 동작하지 않습니다',1)">${ic('dl',14)}구글 시트 CSV 가져오기</button><button class="btn pri" onclick="toast('데모: 학생 등록 폼은 다음 단계',1)">${ic('plus',14)}학생 등록</button></div>
-    <div class="tblw"><table class="t"><tr><th>이름</th><th>학년</th><th>학교</th><th>담임반</th><th>담임</th><th>원어민반</th><th>상태</th><th>학부모</th></tr>${DB.students.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${s.grade}</td><td>${s.school}</td><td class="small">${dayLabel(CL(s.cls))} ${CL(s.cls).start} ${esc(CL(s.cls).name)}</td><td>${US(s.homeroom).name}</td><td class="small">${esc(CL(s.nclass).name)}</td><td><span class="bd g">${s.status}</span></td><td class="small muted">${phoneOf(s)}</td></tr>`).join('')}</table></div></div>`;
+    <div class="tblw"><table class="t"><tr><th>이름</th><th>학년</th><th>학교</th><th>담임반</th><th>담임</th><th>원어민반</th><th>상태</th><th>학부모</th></tr>${DB.students.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${s.grade}</td><td>${schoolLink(s.school)}</td><td class="small">${dayLabel(CL(s.cls))} ${CL(s.cls).start} ${esc(CL(s.cls).name)}</td><td>${US(s.homeroom).name}</td><td class="small">${esc(CL(s.nclass).name)}</td><td><span class="bd g">${s.status}</span></td><td class="small muted">${phoneOf(s)}</td></tr>`).join('')}</table></div></div>`;
 }
 const SETTING_RANGE={pass:[10,30],dropPct:[5,50],gapDays:[3,60],fastPass:[1,10],maxCare:[3,10],incompleteRisk:[1,10],riskDropPct:[5,50],worseRisk:[1,10],riskGapDays:[7,90],newWeeks:[2,16],churnHigh:[20,100],churnWatch:[5,90]};
 function setSetting(k,v){
@@ -1832,11 +1883,14 @@ function toast(msg,err){$('#toast').innerHTML=`<div class="toast ${err?'err':''}
 const PAGES={parent:parentPage,dashboard,home:homePage,entry:entryPage,remedial:remedialPage,students:studentsPage,timeline:timelinePage,report:reportPage,admin:adminPage,showcase:showcasePage};
 /* ============ self test (index.html#test) ============ */
 const TESTS=[];const T=(name,fn)=>TESTS.push([name,fn]);
+const SCH_SAMPLE=(over={})=>{const d={name:'단원중',full:'단원중학교',errors:{schedule:null,info:null},
+  schedule:[{date:'2026-10-03',event:'개천절',exam:false,off:true,grades:[1,2,3]},{date:'2026-10-14',event:'2학기 1회고사',exam:true,off:false,grades:[1,2,3]},{date:'2026-10-15',event:'2학기 1회고사',exam:true,off:false,grades:[1,2,3]},{date:'2026-11-30',event:'2학기 2회고사',exam:true,off:false,grades:[2]}],
+  info:{year:2026,students:612,classes:24,perClass:25.5,teachers:45,byGrade:[{grade:1,classes:8,students:205},{grade:2,classes:8,students:201},{grade:3,classes:8,students:206}]},...over};return{st:'ok',d}};
 function selfTest(){
   const keep={DB,ME,dismissed,RS,DRAFT,M,DIRTY,HOMECLS,FILT:{...FILT},confirm:window.confirm};
   const fail=[];let pass=0;
   for(const [n,fn] of TESTS){
-    DB=buildData();ME=null;dismissed=new Set();RS={};DRAFT={};M={};DIRTY=false;MF=null;$('#modal').innerHTML='';FOLD=new Set();CHV='table';SIDE=true;DTAB='brief';
+    DB=buildData();ME=null;dismissed=new Set();RS={};DRAFT={};M={};DIRTY=false;MF=null;$('#modal').innerHTML='';FOLD=new Set();CHV='table';SIDE=true;DTAB='brief';SCH={};
     try{fn()===true?pass++:fail.push(n)}catch(e){fail.push(`${n} (${e.message})`)}
     window.confirm=keep.confirm;
   }
@@ -1910,7 +1964,7 @@ T('글자 대비 4.5 이상 (전 화면)',()=>{const bad=[];const chk=()=>bad.pu
   ME=US('D1');DTAB='overview';R={page:'dashboard',p:{}};render();chk();DTAB='brief';CHV='board';render();chk();CHV='table';openFind();chk();closeModal();
   R={page:'parent',p:{sid:'S1',month:'2026-09'}};render();chk();
   ME=US('T1');HOMECLS='C11';DB.memos.push({id:'MMc',teacher:'T1',sid:'S1',text:'메모',created:TODAY});R={page:'home',p:{}};render();chk();
-  openCare('S1',{area:'word'});rm();chk();closeModal();openConsult('S1');chk();closeModal();ME=null;R={page:'login',p:{}};render();if(bad.length)console.log('LOW',[...new Set(bad)].slice(0,12).join(' | '));return bad.length==0});
+  openCare('S1',{area:'word'});rm();chk();closeModal();openConsult('S1');chk();closeModal();SCH['단원중']=SCH_SAMPLE();openSchool('단원중');chk();closeModal();ME=null;R={page:'login',p:{}};render();if(bad.length)console.log('LOW',[...new Set(bad)].slice(0,12).join(' | '));return bad.length==0});
 T('누르는 것은 모두 키보드로',()=>{let miss=0;for(const [u,pg] of PAGES6){ME=US(u);R=pg=='timeline'?{page:pg,p:{sid:'S1'}}:{page:pg,p:{}};render();a11yFix();
   miss+=[...document.querySelectorAll('#app [onclick]')].filter(e=>!['BUTTON','INPUT','SELECT','TEXTAREA'].includes(e.tagName)&&!(e.tabIndex>=0&&e.getAttribute('role'))).length}ME=null;render();return miss==0});
 // 7단계 노션 화면
@@ -1927,6 +1981,16 @@ T('보드 보기: 학생 수 같고 상태별 칸',()=>{ME=US('D1');const s=DB.s
 T('사이드바 접기·열기',()=>{ME=US('D1');R={page:'dashboard',p:{}};render();document.querySelector('.sidex').click();const a=document.querySelector('.shell.noside')&&cssRules().some(r=>!r.media&&r.selectorText=='.shell.noside .side'&&r.style.display=='none');
   document.querySelector('.sideopen').click();const b=!document.querySelector('.shell.noside');ME=null;render();return !!a&&b});
 T('⌘K는 작성 중인 창을 지우지 않음',()=>{ME=US('T1');R={page:'home',p:{}};render();openCare('S1',{area:'word'});const k=new KeyboardEvent('keydown',{key:'k',metaKey:MAC,ctrlKey:!MAC,bubbles:true});document.dispatchEvent(k);const ok=M.kind=='care'&&!$('#modal .findm');closeModal();ME=null;render();return ok});
+// 8단계 학교 정보
+T('학교 링크는 연결된 학교만',()=>schoolLink('단원중').includes("openSchool('단원중')")&&!schoolLink('없는중').includes('openSchool')&&DB.students.every(s=>REAL_SCHOOLS.includes(s.school)));
+T('파일로 열면 배포 주소 안내',()=>{ME=US('D1');openSchool('와동중');const h=$('#modal').innerHTML;closeModal();return /^https?:$/.test(location.protocol)||(h.includes('academy-records.vercel.app')&&SCH['와동중'].st=='local')});
+T('학교 창: 시험 강조·D-day·학생 수',()=>{ME=US('D1');SCH['단원중']=SCH_SAMPLE();openSchool('단원중');const h=$('#modal').innerHTML;closeModal();
+  return h.includes('D-13')&&h.includes('612')&&h.includes('>시험<')&&h.includes('학교알리미 2026년')&&h.includes('개천절')&&h.includes(`우리 학원 ${DB.students.filter(s=>s.school=='단원중').length}명`)});
+T('학교 창: 실패하면 이유와 다시 시도',()=>{ME=US('D1');SCH['단원중']=SCH_SAMPLE({schedule:null,errors:{schedule:'NEIS 키 없음',info:null}});openSchool('단원중');const a=$('#modal').innerHTML;closeModal();SCH['고잔초']={st:'err'};openSchool('고잔초');const b=$('#modal').innerHTML;closeModal();
+  return a.includes('불러오지 못했어요')&&a.includes('NEIS 키 없음')&&a.includes('612')&&b.includes('다시 시도')});
+T('대시보드 학교 시험: 45일 안만·우리 학생 수',()=>{REAL_SCHOOLS.forEach(n=>SCH[n]={st:'ok',d:{schedule:[],info:null,errors:{}}});SCH['단원중']=SCH_SAMPLE();ME=US('D1');
+  const {list}=schoolExams();const h=schoolExamCard();const n2=DB.students.filter(s=>s.school=='단원중').length;
+  return list.length==1&&list[0].from=='2026-10-14'&&list[0].to=='2026-10-15'&&list[0].ours==n2&&h.includes('D-13')&&h.includes('10/14 ~ 10/15')&&!h.includes('2회고사')});
 T('입력 창 바깥은 버튼 아님·Esc로 닫힘',()=>{ME=US('T1');openCare('S1',{});rm();a11yFix($('#modal'));const bg=$('#modal .mbg');const ok1=bg&&!bg.hasAttribute('role')&&$('#modal .modal').getAttribute('role')=='dialog';document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));return ok1&&!MF});
 T('토글도 키보드 초점',()=>{ME=US('D1');R={page:'admin',p:{}};ADM='extra';render();const i=document.querySelector('.toggle input');ADM='settings';const ok=i&&getComputedStyle(i).display!='none';ME=null;render();return ok});
 T('확인함 버튼에 글자',()=>{ME=US('T1');HOMECLS='C11';return /onclick="dismiss\([^"]*\)"[^>]*>[^<]*(<svg[\s\S]*?<\/svg>)?\s*확인함/.test(homePage())});
