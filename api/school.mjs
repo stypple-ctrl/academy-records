@@ -53,7 +53,7 @@ async function info(fetchFn, key, sch, year) {
     Object.entries({ apiKey: key, apiType: '09', sidoCode: REGION.sido, sggCode: REGION.sgg, schulKndCode: sch.kind, pbanYr: String(y) })
       .forEach(([k, v]) => u.searchParams.set(k, v));
     const d = await getJson(fetchFn, u);
-    if (d.resultCode !== 'success') { if (last) throw new Error('학교알리미 ' + String(d.resultCode || 'error').slice(0, 20)); continue; } // 올해 공시 전이면 작년으로
+    if (d.resultCode !== 'success') { if (last) throw new Error('학교알리미: ' + String(d.resultMsg || d.resultCode || 'error').replace(/[0-9a-fA-F]{16,}/g, '').slice(0, 40)); continue; } // 이유 문구만(키처럼 보이는 값 제거) // 올해 공시 전이면 작년으로
     const r = (d.list || []).find(x => x.SCHUL_NM === sch.full);
     if (!r) continue;
     // 초등 1~6학년 = COL_?1~6, 중등 1~3학년 = COL_?9~11
