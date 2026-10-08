@@ -82,7 +82,7 @@ h2{font-size:30px;font-weight:700}h3{font-size:17px;font-weight:600}h4{font-size
 .card.flat{box-shadow:none;background:var(--fill)}
 .card.in{box-shadow:none;background:var(--fill)}
 .chead{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-.chead h3{flex:1}
+.chead h3{flex:1 1 9em;min-width:0;overflow-wrap:anywhere}
 .grid{display:grid;gap:16px}
 .g2{grid-template-columns:1.4fr 1fr}.g2e{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
 .g4{grid-template-columns:repeat(4,1fr)}.g5{grid-template-columns:repeat(5,1fr)}
@@ -95,7 +95,11 @@ h2{font-size:30px;font-weight:700}h3{font-size:17px;font-weight:600}h4{font-size
 .kgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 @media (max-width:520px){.kgrid{grid-template-columns:1fr}}
 @media (max-width:1180px){.g5{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:980px){.g2,.g2e,.g3,.gside{grid-template-columns:1fr}}
+.dtop{grid-template-columns:1fr 1.15fr}
+@media (max-width:980px){.g2,.g2e,.g3,.gside,.dtop{grid-template-columns:1fr}}
+.task{min-width:0;overflow-wrap:anywhere;flex-wrap:wrap}.task>.small,.task>b{flex:none;max-width:100%}.task>span,.task .sp{min-width:0;overflow-wrap:anywhere}.task .sp{flex:1 1 10em}
+.task .bd{white-space:normal;text-align:left}
+.stat{flex-wrap:wrap}
 
 /* ============ buttons: Filled / Gray / Plain (캡슐, 최소 높이 36, 휴대폰 44) ============ */
 .btn{text-decoration:none;border:0;border-radius:99px;padding:8px 16px;min-height:36px;background:var(--fill);cursor:pointer;font-weight:600;font-size:15px;transition:background .15s,opacity .15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;color:var(--tint-ink)}
@@ -509,6 +513,7 @@ function buildData(){
   const SHC=['주제문이 분명해짐','문장 길이와 연결어가 다양해짐','발음이 또렷해지고 속도가 안정됨','결론 문단 구성이 좋아짐','자기 경험을 구체적으로 표현함'];
   db.students.forEach(st=>['2026-08','2026-09'].forEach(m=>db.showcase.push({id:nid('SH'),sid:st.id,month:m,kind:pick(['essay','speaking']),url:`https://drive.google.com/demo/${st.id}-${m}`,comment:pick(SHC)})));
   addRoleData(db);
+  applyDataMode(db,DATA_MODE);
   return db;
 }
 
@@ -516,6 +521,36 @@ function buildData(){
 const WORDS='apple brave cloud dream eager fancy giant habit image jelly knock lemon magic noble ocean pilot quiet river smile tiger umbra vivid whale xenon youth zebra anchor bridge candle desert engine forest garden harbor island jungle kettle ladder mirror needle orange parrot rocket saddle tunnel violin wagon yellow zipper'.split(' ');
 // 그 수업 단어 시험 정답지 30개 (데모: 수업 날짜로 단어 목록을 돌림)
 function wordKey(sessId,db=DB){const s=db.sessions.find(x=>x.id==sessId);const off=s?(+s.date.slice(8,10)+ +s.date.slice(5,7)*3)%WORDS.length:0;return Array.from({length:30},(_,i)=>WORDS[(off+i)%WORDS.length])}
+/* ---- 개발용: 최악의 데이터 / 비어 있음 (주소 ?data=worst | ?data=empty 일 때만, 실제 운영엔 없음) ---- */
+let DATA_MODE=(new URLSearchParams(location.search).get('data')||'demo');
+function setDataMode(m){DATA_MODE=m;DB=buildData();RS={};DRAFT={};dismissed=new Set();render()}
+function applyDataMode(db,mode){
+  if(mode=='worst'){
+    const S=db.students,set=(i,o)=>Object.assign(S[i],o);
+    set(0,{name:'Alexandra Wiśniewska-Kowalczyk',school:'서울대학교사범대학부설여자중학교'});
+    set(1,{name:'남궁아름다운나라',school:'한국과학기술원부설한국과학영재학교'});
+    set(2,{name:'이란'});set(3,{name:"Seán O'Brien <b>&amp;"});set(4,{name:'Christopher Alexander Montgomery III'});
+    db.users.find(u=>u.id=='T1').name='Christopher Montgomery';db.users.find(u=>u.id=='N1').name='Konstantin Oberhauser-Wettstein';
+    db.classes.find(c=>c.id=='C11').name='중2 Advanced Reading & Writing 내신대비 특강 A';
+    db.classes.find(c=>c.id=='C13').name='초4 Starter Phonics·Vocabulary 집중반 C';
+    const LONG='에세이 수정본 — 서론 topic sentence 다시 쓰고 본론 예시 2개 추가해서 제출하기 (담임 확인 후 귀가)';
+    const open=db.tickets.filter(t=>t.status=='open'&&t.avail<=TODAY);open.slice(0,3).forEach(t=>t.task=LONG);
+    if(open[0])db.notes.push({id:'NTw',sid:open[0].sid,from:db.students.find(x=>x.id==open[0].sid).homeroom,text:'참고 자료 https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/view?usp=sharing 꼭 보여 주세요',created:TODAY});
+    db.memos.push({id:'MMw',teacher:'T1',sid:S[0].id,text:'Benachrichtigungseinstellungen 처럼 긴 단어 + https://example.com/workspaces/acme/projects/q3-launch/docs/9f8e7d6c5b4a?tab=comments&filter=unresolved',created:TODAY});
+    db.care.filter(r=>r.sid==S[0].id||r.sid==S[1].id).forEach(r=>r.finding='관계대명사 which/that 구분, 과거완료 시제, 5형식 목적보어까지 같은 단원에서 세 번 연속 같은 유형으로 틀림 — 노트 확인 결과 개념 정리가 안 되어 있음');
+    db.showcase.filter(x=>x.sid==S[0].id).forEach(x=>x.comment='서론 topic sentence가 분명해지고 본론에 자기 경험 예시를 두 개나 넣었으며 결론 문단에서 주장을 다시 정리하는 구조가 생김');
+    db.withdrawals[0].name='남궁아름다운나라';db.withdrawals[0].reason='타 학원 이동 (학부모 상담 후, 형제 학원 통합 희망)';
+  }
+  if(mode=='empty'){
+    db.tickets.forEach(t=>{if(t.status=='open')t.status='done'});db.suggestions=[];db.notes=[];db.memos=[];db.withdrawals=[];
+    db.care.forEach(r=>{if(!r.result)r.result='improved'});db.riskStatus={};
+  }
+}
+function dataToggle(){
+  if(!/[?&]data=/.test(location.search)&&DATA_MODE=='demo')return '';
+  const seg=[['demo','데모 데이터'],['worst','최악의 경우'],['empty','비어 있음']];
+  return `<div class="noprint" style="position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:70;background:#e5e5ea;border-radius:9px;padding:2px;display:flex;white-space:nowrap;font:13px -apple-system,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.15)">${seg.map(([k,l])=>`<button onclick="setDataMode('${k}')" style="border:0;padding:6px 12px;border-radius:7px;color:#000;cursor:pointer;background:${DATA_MODE==k?'#fff':'transparent'};${DATA_MODE==k?'font-weight:600':''}">${l}</button>`).join('')}</div>`;
+}
 function addRoleData(db){
   // 등록일: 14명은 최근 8주 안에 들어온 신규생
   db.students.forEach((st,i)=>{st.enrolled=i%7==3?addDays('2026-08-17',ri(0,42)):pick(['2025-03-03','2025-09-01','2026-03-02'])});
@@ -766,7 +801,7 @@ document.addEventListener('keydown',e=>{const t=e.target;if(!(t instanceof Eleme
   if(e.key=='Enter'||(e.key==' '&&t.getAttribute('role')=='button')){e.preventDefault();t.click()}});
 function render(){
   const app=$('#app');
-  if(!ME){app.innerHTML=loginView();a11yFix(app);return}
+  if(!ME){app.innerHTML=loginView()+dataToggle();a11yFix(app);return}
   let body;
   try{body=(PAGES[R.page]||(()=>''))(R.p)}catch(e){console.error(e);body=`<div class="card">오류: ${esc(e.message)}</div>`}
   const d=D(TODAY);
@@ -779,7 +814,7 @@ function render(){
     <div class="topbar"><div class="ttl"><h2>${TITLE[R.page]||''}</h2><div class="crumb">${ROLE[ME.role]} · ${TITLE[R.page]||''}</div></div>
       <span class="datechip">${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()} (${WD[d.getDay()]})</span>
       <div class="me">${avatar(ME.name)}<div><div class="nm">${esc(ME.name)}</div><div class="rl">${ROLE[ME.role]}</div></div><button class="btn sm" onclick="logout()" title="역할 바꾸기">${ic('swap',14)}역할</button></div></div>
-    ${body}</main></div>`;
+    ${body}</main></div>${dataToggle()}`;
   a11yFix(app);
 }
 
@@ -862,7 +897,7 @@ function dashboard(){
     <span class="small muted" style="white-space:nowrap">대상 <b style="color:var(--text)">${studs.length}</b>명</span>
   </div></div>
 
-  <div class="grid g2 mb" style="grid-template-columns:1fr 1.15fr">
+  <div class="grid g2 dtop mb">
     <div class="card"><div class="chead"><h3>지금 챙길 일</h3><span class="small muted">누르면 바로 이동</span></div>
       ${todos.length?todos.map(x=>`<div class="todo" onclick="${x.go}"><span class="tic" style="background:${tcol[x.c][0]};color:${tcol[x.c][1]}">${ic(x.i,18)}</span><div class="sp"><div class="tt">${x.t}</div><div class="ts">${x.s}</div></div><span class="tc">${x.n}</span><span class="chev">›</span></div>`).join(''):'<div class="empty">지금 챙길 일이 없습니다 👍</div>'}</div>
     <div class="kgrid">
@@ -1018,9 +1053,9 @@ function homePage(){
   const newTag=s=>{const a=adaptOf(s);return a?` <span class="bd b" style="padding:1px 7px">신규 ${a.week}주</span>`:''};
   const stat=(ringHtml,v,l)=>`<div class="stat">${ringHtml}<div><div class="sv">${v}</div><div class="sl">${l}</div></div></div>`;
   const memos=ME.role=='teacher'?DB.memos.filter(m=>m.teacher==ME.id):[];
-  const memoCard=ME.role=='teacher'?`<div class="card mb" style="padding:14px 16px"><div class="row" style="flex-wrap:nowrap"><b style="white-space:nowrap">오늘 메모</b>
+  const memoCard=ME.role=='teacher'?`<div class="card mb" style="padding:14px 16px"><div class="row"><b style="white-space:nowrap">오늘 메모</b>
     <select id="memoSid" data-nd style="width:auto;max-width:150px"><option value="">학생 (선택)</option>${myStudents().map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
-    <input id="memoText" data-nd placeholder="쉬는 시간에 한 줄만 — 퇴근 전에 케어 기록으로 정리" onkeydown="if(event.key=='Enter')addMemo()"><button class="btn pri sm" onclick="addMemo()">남기기</button></div>
+    <input id="memoText" data-nd style="flex:1 1 180px;width:auto;min-width:0" placeholder="쉬는 시간에 한 줄만 — 퇴근 전에 케어 기록으로 정리" onkeydown="if(event.key=='Enter')addMemo()"><button class="btn pri sm" onclick="addMemo()">남기기</button></div>
     ${DB.notes.filter(n=>n.from==ME.id).map(n=>`<div class="task"><span class="bd b">조교 당부</span><b>${esc(ST(n.sid).name)}</b><span class="sp" style="font-weight:500;min-width:0;overflow-wrap:anywhere">${esc(n.text)}</span><button class="btn sm ghost" onclick="delNote('${n.id}')">지우기</button></div>`).join('')}
     ${memos.map(m=>`<div class="task"><span class="small muted">${md(m.created)}</span>${m.sid?`<b>${esc(ST(m.sid).name)}</b>`:''}<span class="sp" style="font-weight:500;min-width:0;overflow-wrap:anywhere">${esc(m.text)}</span><button class="btn sm" onclick="openCare(${m.sid?`'${m.sid}'`:'null'},{finding:${esc(JSON.stringify(m.text))},memoId:'${m.id}'})">케어 기록으로 정리</button><button class="btn sm ghost" onclick="delMemo('${m.id}')">지우기</button></div>`).join('')}</div>`:'';
   return `<div class="mb">${picker}</div>${memoCard}
@@ -1057,7 +1092,7 @@ function homePage(){
         ${canW?`<div class="row" style="margin-top:8px;gap:6px"><button class="btn sm pri" onclick='openCare("${s.id}",{area:"attitude",type:"${c.reasons[0][0].startsWith('숙제')?'missing':c.reasons[0][0].startsWith('단어')?'drop':'behavior'}"})'>챙기기 기록</button><button class="btn sm" onclick="openConsult('${s.id}')">상담 준비</button><button class="btn sm" onclick="openNote('${s.id}')">조교 당부</button></div>`:''}</div>`}).join('')}</div>`:''}
     <div class="card"><div class="chead"><h3>결과 입력 대기</h3><span class="bd b">${results.length}건</span></div>
       ${results.length?results.map(r=>{const rec=DB.care.find(x=>x.id==r.rid);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div class="row" style="flex-wrap:nowrap"><b>${esc(r.st.name)}</b><span class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(rec.finding)}">${AREAS[rec.area]} · ${esc(rec.finding)}</span></div>
-        <div class="row" style="margin-top:8px;flex-wrap:nowrap"><span class="small muted sp">${ACTIONS[rec.action]} · ${md(rec.follow)} 확인</span>${canW?`<div class="seg">${Object.entries(RESULTS).map(([k,l],i)=>`<button onclick="quickResult('${rec.id}','${k}')">${l}</button>`).join('')}</div><button class="btn sm ghost" onclick="openResult('${rec.id}')">자세히</button>`:''}</div></div>`}).join('')
+        <div class="row" style="margin-top:8px"><span class="small muted sp" style="min-width:8em">${ACTIONS[rec.action]} · ${md(rec.follow)} 확인</span>${canW?`<div class="seg">${Object.entries(RESULTS).map(([k,l],i)=>`<button onclick="quickResult('${rec.id}','${k}')">${l}</button>`).join('')}</div><button class="btn sm ghost" onclick="openResult('${rec.id}')">자세히</button>`:''}</div></div>`}).join('')
         :'<div class="empty">밀린 결과 입력이 없습니다</div>'}</div>
     ${sugg.length?`<div class="card" style="box-shadow:inset 0 0 0 1.5px var(--amber)"><div class="chead"><h3>나머지 제안 · 확정 필요</h3><span class="bd a">${sugg.length}건</span></div>
       <div class="small muted" style="margin-bottom:8px">조교 입력에서 자동 제안됨. 확정해야 강당 명단에 올라갑니다.</div>
@@ -1833,6 +1868,9 @@ T('대시보드에 교사별 미입력·공백, 케어 유형',()=>{ME=US('D1');
 T('조교 당부 지우기',()=>{window.confirm=()=>true;ME=US('T1');const n=DB.notes.find(x=>x.from=='T1')||(DB.notes.push({id:'NTx',sid:'S1',from:'T1',text:'t',created:TODAY}),DB.notes.at(-1));delNote(n.id);return !DB.notes.some(x=>x.id==n.id)});
 T('관찰 태그 해제 저장',()=>{ME=US('A1');const ss=DB.sessions.find(x=>x.pending);ENT.cls=ss.cls;entryPage();const sid=studentsOf(ss.cls)[0].id;openGrade(ss.id,sid);M.obs='sleepy';saveGrade();
   Object.values(DRAFT[ss.id]).forEach(d=>{if(d.score==='')d.score=25});saveEntry(ss.id);ENT.cls=ss.cls;entryPage();openGrade(ss.id,sid);M.obs=null;saveGrade();saveEntry(ss.id);return !DB.obs.some(o=>o.sid==sid&&o.date==TODAY)});
+// 6단계 6-4 최악의 데이터
+T('최악·빈 데이터로 전 화면 오류 없음',()=>{let ok=true;for(const m of ['worst','empty']){DATA_MODE=m;DB=buildData();for(const [u,pg] of PAGES6){ME=US(u);R=pg=='timeline'?{page:pg,p:{sid:DB.students[0].id}}:{page:pg,p:{}};render();if(document.querySelector('#app').innerText.includes('오류:'))ok=false}}DATA_MODE='demo';ME=null;R={page:'login',p:{}};render();return ok});
+T('대시보드 위쪽 칸도 좁은 화면 규칙',()=>cssRules().some(r=>r.media&&/max-width: 980px/.test(r.media.mediaText)&&/\.dtop/.test(r.cssText))&&!dashboardHasInlineGrid());
 // 5단계
 T('경과 분',()=>elapsedMin('17:05','17:31')==26);
 T('일괄 입장',()=>{ME=US('A1');const sids=[...new Set(DB.tickets.filter(t=>t.status=='open'&&t.avail<=TODAY).map(t=>t.sid))];RS[sids[0]]={in:'09:00'};bulkCheckIn();return sids.every(s=>RS[s]&&RS[s].in)&&RS[sids[0]].in=='09:00'});
@@ -1868,6 +1906,7 @@ T('기준 변경 즉시 반영',()=>{DB.settings.pass=26;try{const sc=DB.scores.
 T('조교는 오늘 수업 반만',()=>{ME=US('A1');const c=entryClasses();return c.length>0&&c.every(x=>isClassDay(x,TODAY))});
 T('조교 지난 점수 못 봄',()=>{ME=US('A1');ENT.cls='C11';return !entryPage().includes('class="scin"')});
 // HIG 디자인 검토 수정
+const dashboardHasInlineGrid=()=>{ME=US('D1');const h=dashboard();ME=null;return /style="grid-template-columns/.test(h)};
 const cssRules=()=>[...document.styleSheets].flatMap(ss=>{try{return[...ss.cssRules]}catch(e){return[]}});
 const probe=(cls,tag='button')=>{const w=document.createElement('div');w.className=cls.split('>')[0];const e=document.createElement(tag);e.className=cls.split('>')[1]||'';w.appendChild(e);document.body.appendChild(w);const st=getComputedStyle(e);const r={c:st.color,bg:st.backgroundColor,mh:st.minHeight};w.remove();return r};
 T('고대비 설정은 라이트·다크 따로',()=>cssRules().some(r=>r.media&&/prefers-contrast: more/.test(r.media.mediaText)&&/prefers-color-scheme: dark/.test(r.media.mediaText))&&!cssRules().some(r=>r.media&&r.media.mediaText=='(prefers-contrast: more)'));
