@@ -1,5 +1,5 @@
 // api/school.mjs 점검 (가짜 응답으로, 네트워크·키 없이). 실행: node tests/api-school.test.mjs
-import handler, { buildSchool, kstToday } from '../api/school.mjs';
+import handler, { buildSchool, kstToday, gradesInName } from '../api/school.mjs';
 
 const KEY = { NEIS_KEY: 'neis-secret-123', SCHOOLINFO_KEY: 'info-secret-456' };
 const neisRows = [
@@ -44,6 +44,7 @@ const boom = async url => { throw new Error('connect fail ' + url); };
 const d = await buildSchool('와동중', '2026-10-01', boom, KEY);
 t('오류에 주소·키 노출 없음', !JSON.stringify(d.body).includes('secret') && !JSON.stringify(d.body).includes('http'));
 
+t('이름에서 학년 읽기', gradesInName('2차 정기시험(1, 2학년)').join() === '1,2' && gradesInName('1~3학년 평가').join() === '1,2,3' && gradesInName('1·2학년').join() === '1,2' && gradesInName('개교기념일') === null);
 t('한국 날짜', kstToday(Date.UTC(2026, 9, 8, 16)) === '2026-10-09');
 const res = () => { const o = { h: {}, setHeader(k, v) { o.h[k] = v }, status(c) { o.c = c; return o }, json(b) { o.b = b; return o } }; return o; };
 const r1 = res(); await handler({ query: { s: '단원중', z: '1' } }, r1);
@@ -58,5 +59,5 @@ const html = async () => ({ ok: true, json: async () => { throw new SyntaxError(
 const f = await buildSchool('단원중', '2026-10-01', html, KEY);
 t('형식 오류는 고정 문구', f.body.errors.schedule === '응답 형식 오류' && !JSON.stringify(f.body).includes('secret'));
 
-console.log(fail.length ? 'API TEST FAIL ' + fail.join(' | ') : 'API TEST PASS 17');
+console.log(fail.length ? 'API TEST FAIL ' + fail.join(' | ') : 'API TEST PASS 18');
 process.exit(fail.length ? 1 : 0);

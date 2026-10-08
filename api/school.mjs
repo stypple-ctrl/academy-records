@@ -24,6 +24,16 @@ async function getJson(fetchFn, url) {
 // 한국 날짜(서버 기준). 화면이 보낸 날짜는 쓰지 않는다 — 캐시 우회·호출 낭비 방지
 export const kstToday = (now = Date.now()) => new Date(now + 9 * 36e5).toISOString().slice(0, 10);
 
+// "2학년", "1, 2학년", "1·2학년", "1~3학년" → [학년…]
+export function gradesInName(name) {
+  const out = new Set();
+  for (const m of name.matchAll(/([1-6](?:\s*[,·~\-]\s*[1-6])*)\s*학년/g)) {
+    const nums = m[1].match(/[1-6]/g).map(Number);
+    if (/[~\-]/.test(m[1]) && nums.length === 2) for (let g = nums[0]; g <= nums[1]; g++) out.add(g); else nums.forEach(g => out.add(g));
+  }
+  return out.size ? [...out].sort() : null;
+}
+
 async function schedule(fetchFn, key, sch, from) {
   const to = new Date(from.getTime() + DAYS * 864e5);
   const u = new URL('https://open.neis.go.kr/hub/SchoolSchedule');
@@ -42,9 +52,7 @@ async function schedule(fetchFn, key, sch, from) {
       exam: EXAM.test(r.EVENT_NM) && !/수능|수학능력/.test(r.EVENT_NM), // 수능일은 초·중학교엔 휴업일
       off: r.SBTR_DD_SC_NM === '휴업일' || r.SBTR_DD_SC_NM === '공휴일',
       // 이름에 "2학년"처럼 학년이 있으면 그 학년만 (NEIS 학년 표시가 전 학년 Y로 오는 경우가 있음)
-      grades: (r.EVENT_NM.match(/[1-6](?=학년)/g) || []).map(Number).length
-        ? [...new Set(r.EVENT_NM.match(/[1-6](?=학년)/g).map(Number))]
-        : yn.map((p, i) => (r[p + '_GRADE_EVENT_YN'] === 'Y' ? i + 1 : 0)).filter(Boolean),
+      grades: gradesInName(r.EVENT_NM) || yn.map((p, i) => (r[p + '_GRADE_EVENT_YN'] === 'Y' ? i + 1 : 0)).filter(Boolean),
     }))
     .sort((a, b) => (a.date < b.date ? -1 : 1));
 }
