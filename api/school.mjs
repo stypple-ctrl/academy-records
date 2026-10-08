@@ -39,9 +39,12 @@ async function schedule(fetchFn, key, sch, from) {
     .map(r => ({
       date: `${r.AA_YMD.slice(0, 4)}-${r.AA_YMD.slice(4, 6)}-${r.AA_YMD.slice(6, 8)}`,
       event: r.EVENT_NM.trim(),
-      exam: EXAM.test(r.EVENT_NM),
+      exam: EXAM.test(r.EVENT_NM) && !/수능|수학능력/.test(r.EVENT_NM), // 수능일은 초·중학교엔 휴업일
       off: r.SBTR_DD_SC_NM === '휴업일' || r.SBTR_DD_SC_NM === '공휴일',
-      grades: yn.map((p, i) => (r[p + '_GRADE_EVENT_YN'] === 'Y' ? i + 1 : 0)).filter(Boolean),
+      // 이름에 "2학년"처럼 학년이 있으면 그 학년만 (NEIS 학년 표시가 전 학년 Y로 오는 경우가 있음)
+      grades: (r.EVENT_NM.match(/[1-6](?=학년)/g) || []).map(Number).length
+        ? [...new Set(r.EVENT_NM.match(/[1-6](?=학년)/g).map(Number))]
+        : yn.map((p, i) => (r[p + '_GRADE_EVENT_YN'] === 'Y' ? i + 1 : 0)).filter(Boolean),
     }))
     .sort((a, b) => (a.date < b.date ? -1 : 1));
 }

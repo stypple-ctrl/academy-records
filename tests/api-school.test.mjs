@@ -7,6 +7,8 @@ const neisRows = [
   { AA_YMD: '20261003', EVENT_NM: '개천절', SBTR_DD_SC_NM: '공휴일', ONE_GRADE_EVENT_YN: 'Y' },
   { AA_YMD: '20261010', EVENT_NM: '토요휴업일', SBTR_DD_SC_NM: '휴업일' },
   { AA_YMD: '20261020', EVENT_NM: '교원능력개발평가', SBTR_DD_SC_NM: '해당없음' },
+  { AA_YMD: '20261021', EVENT_NM: '2학기 1차 정기시험(2학년)', SBTR_DD_SC_NM: '해당없음', ONE_GRADE_EVENT_YN: 'Y', TW_GRADE_EVENT_YN: 'Y', THREE_GRADE_EVENT_YN: 'Y' },
+  { AA_YMD: '20261119', EVENT_NM: '대학수학능력시험일', SBTR_DD_SC_NM: '휴업일' },
   { AA_YMD: '2026-bad', EVENT_NM: '<img>', SBTR_DD_SC_NM: '해당없음' },
 ];
 const infoList = [{ SCHUL_NM: '단원중학교', COL_S_SUM: '612', COL_C_SUM: '24', COL_SUM: '25.5', TEACH_CNT: '45', COL_C9: '8', COL_S9: '205', COL_C10: '8', COL_S10: '201', COL_C11: '8', COL_S11: '206' }];
@@ -23,7 +25,8 @@ const t = (name, ok) => { if (!ok) fail.push(name); };
 
 const a = await buildSchool('단원중', '2026-10-01', fake, KEY);
 t('정상 200', a.status === 200);
-t('일정 날짜순·토요휴업일·잘못된 날짜 제외', a.body.schedule.map(e => e.date).join() === '2026-10-03,2026-10-15,2026-10-20');
+t('일정 날짜순·토요휴업일·잘못된 날짜 제외', a.body.schedule.map(e => e.date).join() === '2026-10-03,2026-10-15,2026-10-20,2026-10-21,2026-11-19');
+t('이름의 학년만·수능은 시험 아님', a.body.schedule[3].grades.join() === '2' && a.body.schedule[3].exam && !a.body.schedule[4].exam);
 t('평가라는 말만으로 시험 아님', a.body.schedule[2].exam === false);
 t('시험 표시', a.body.schedule.find(e => e.event.includes('고사')).exam === true && a.body.schedule[0].exam === false);
 t('학년 표시', a.body.schedule[1].grades.join() === '1,2,3');
@@ -55,5 +58,5 @@ const html = async () => ({ ok: true, json: async () => { throw new SyntaxError(
 const f = await buildSchool('단원중', '2026-10-01', html, KEY);
 t('형식 오류는 고정 문구', f.body.errors.schedule === '응답 형식 오류' && !JSON.stringify(f.body).includes('secret'));
 
-console.log(fail.length ? 'API TEST FAIL ' + fail.join(' | ') : 'API TEST PASS 16');
+console.log(fail.length ? 'API TEST FAIL ' + fail.join(' | ') : 'API TEST PASS 17');
 process.exit(fail.length ? 1 : 0);
